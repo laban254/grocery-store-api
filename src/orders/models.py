@@ -1,11 +1,11 @@
 from django.db import models
-from accounts.models import Customer
+from django.conf import settings
 from products.models import Product
 
 
 class Order(models.Model):
     """
-    Order model to track customer orders.
+    Order model to track user orders.
     """
     ORDER_STATUS_CHOICES = (
         ('pending', 'Pending'),
@@ -15,8 +15,8 @@ class Order(models.Model):
         ('cancelled', 'Cancelled'),
     )
 
-    customer = models.ForeignKey(
-        Customer,
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
         related_name='orders'
     )

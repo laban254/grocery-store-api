@@ -282,36 +282,11 @@ class OAuthCallbackView(APIView):
                 # Log the error but continue without phone number
                 print(f"Error fetching phone number: {e}")
         
-        # Create or update customer
-        from accounts.models import Customer
-        
-        try:
-            # Try to get existing customer
-            customer = Customer.objects.get(email=user.email)
-            customer_created = False
-            # Update customer information
-            customer.user = user
-            customer.first_name = user.first_name
-            customer.last_name = user.last_name
-            if phone_number and not customer.phone:
-                customer.phone = phone_number
-            customer.save()
-        except Customer.DoesNotExist:
-            # Create new customer
-            customer = Customer.objects.create(
-                user=user,
-                first_name=user.first_name,
-                last_name=user.last_name,
-                email=user.email,
-                phone=phone_number or ''  # Use phone number if available
-            )
-            customer_created = True
-        
-        # Update phone for existing customer if we got one
-        if phone_number and not customer_created and not customer.phone:
-            customer.phone = phone_number
-            customer.save()
-        
+        # Update user phone if available
+        if phone_number and not user.phone:
+            user.phone = phone_number
+            user.save()
+            
         # Create or update social account
         social_account, _ = SocialAccount.objects.get_or_create(
             provider=self.provider_name,

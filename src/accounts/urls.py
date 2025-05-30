@@ -1,12 +1,12 @@
 from django.urls import path
-from .views import CustomerProfileView, UserInfoView, OIDCTokenView
+from .views import UserProfileView, UserInfoView, OIDCTokenView
 from .auth_views import (
     GoogleLoginView, OAuthProvidersView,
     GoogleCallbackView
 )
 
 urlpatterns = [
-    path('profile/', CustomerProfileView.as_view(), name='customer-profile'),
+    path('profile/', UserProfileView.as_view(), name='user-profile'),
     path('user-info/', UserInfoView.as_view(), name='user-info'),
     path('oidc-token/', OIDCTokenView.as_view(), name='oidc-token'),
     

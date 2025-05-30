@@ -1,15 +1,14 @@
 from allauth.socialaccount.adapter import DefaultSocialAccountAdapter
 from django.db import transaction
-from .models import Customer
 
 
 class CustomSocialAccountAdapter(DefaultSocialAccountAdapter):
     """
-    Custom adapter for social accounts that links OIDC users to Customer records.
+    Custom adapter for social accounts that handles OIDC authentication.
     """
     def save_user(self, request, sociallogin, form=None):
         """
-        Save the user and create/link a Customer record.
+        Save the user with OIDC information.
         """
         with transaction.atomic():
             # First, save the user using the default adapter
@@ -21,24 +20,16 @@ class CustomSocialAccountAdapter(DefaultSocialAccountAdapter):
             # Store OIDC-specific information
             user.oidc_id = sociallogin.account.uid
             user.oidc_provider = sociallogin.account.provider
-            user.save()
             
-            # Try to find an existing customer with the same email
-            try:
-                customer = Customer.objects.get(email=user.email)
-                # Link the customer to the user if found
-                customer.user = user
-                customer.save()
-            except Customer.DoesNotExist:
-                # Create a new customer if one doesn't exist
-                first_name = user_data.get('given_name', user.first_name)
-                last_name = user_data.get('family_name', user.last_name)
-                
-                Customer.objects.create(
-                    user=user,
-                    first_name=first_name,
-                    last_name=last_name,
-                    email=user.email
-                )
+            # Update user fields from OIDC data
+            first_name = user_data.get('given_name', user.first_name)
+            last_name = user_data.get('family_name', user.last_name)
+            
+            if first_name:
+                user.first_name = first_name
+            if last_name:
+                user.last_name = last_name
+            
+            user.save()
                 
         return user

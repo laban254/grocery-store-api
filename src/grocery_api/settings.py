@@ -320,7 +320,7 @@ This API supports multiple authentication methods:
         {'name': 'token', 'description': 'JWT token management endpoints'},
     ],
     # Include pattern for callback URLs to ensure they are in the schema
-    'SCHEMA_PATH_PREFIX_INSERT': ['/api/accounts/oauth/'],
+    'SCHEMA_PATH_PREFIX_INSERT': '',
     # Make sure callback endpoints are visible even without explicit schema decoration
     'APPEND_COMPONENTS': {"schemas": {}},
 }

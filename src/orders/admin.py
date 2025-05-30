@@ -16,15 +16,20 @@ class OrderAdmin(admin.ModelAdmin):
     """
     Admin interface for Order model.
     """
-    list_display = ('order_number', 'customer', 'status', 'total_amount', 'created_at')
+    list_display = ('order_number', 'get_user_name', 'status', 'total_amount', 'created_at')
     list_filter = ('status', 'created_at')
-    search_fields = ('order_number', 'customer__first_name', 'customer__last_name', 'customer__email')
+    search_fields = ('order_number', 'user__first_name', 'user__last_name', 'user__email')
     inlines = [OrderItemInline]
     fieldsets = (
         (None, {
-            'fields': ('customer', 'order_number', 'status')
+            'fields': ('user', 'order_number', 'status')
         }),
         ('Order Details', {
             'fields': ('total_amount', 'shipping_address')
         }),
     )
+
+    def get_user_name(self, obj):
+        return obj.user.get_full_name() or obj.user.email
+    get_user_name.short_description = 'User'
+    get_user_name.admin_order_field = 'user__email'

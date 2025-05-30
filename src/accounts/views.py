@@ -3,55 +3,31 @@ from rest_framework import generics, permissions, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
-from .models import Customer, User
-from .serializers import CustomerSerializer, CustomerUpdateSerializer, UserSerializer
+from .models import User
+from .serializers import UserSerializer, UserUpdateSerializer
 
 
-class CustomerProfileView(generics.RetrieveUpdateAPIView):
+class UserProfileView(generics.RetrieveUpdateAPIView):
     """
-    View for retrieving and updating a customer's profile.
+    View for retrieving and updating a user's profile.
     """
     permission_classes = [permissions.IsAuthenticated]
     
     def get_serializer_class(self):
         if self.request.method == 'GET':
-            return CustomerSerializer
-        return CustomerUpdateSerializer
+            return UserSerializer
+        return UserUpdateSerializer
     
     def get_object(self):
         """
-        Get the customer object for the authenticated user.
+        Get the authenticated user object.
         """
-        try:
-            return Customer.objects.get(user=self.request.user)
-        except Customer.DoesNotExist:
-            # If no customer exists for this user, return a 404
-            return None
-    
-    def retrieve(self, request, *args, **kwargs):
-        """
-        Retrieve the customer profile for the authenticated user.
-        """
-        instance = self.get_object()
-        if not instance:
-            return Response(
-                {"detail": "No customer profile found for this user."},
-                status=status.HTTP_404_NOT_FOUND
-            )
-        serializer = self.get_serializer(instance)
-        return Response(serializer.data)
+        return self.request.user
     
     def update(self, request, *args, **kwargs):
         """
-        Update the customer profile for the authenticated user.
+        Update the user's profile.
         """
-        instance = self.get_object()
-        if not instance:
-            return Response(
-                {"detail": "No customer profile found for this user."},
-                status=status.HTTP_404_NOT_FOUND
-            )
-        
         # Don't allow changing the email
         if 'email' in request.data:
             del request.data['email']
