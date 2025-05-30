@@ -37,17 +37,27 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'django.contrib.sites',  # Required for django-allauth
     
     # Third-party apps
     'mptt',
     'rest_framework',
+    'rest_framework_simplejwt',
+    'drf_spectacular',
+    'allauth',
+    'allauth.account',
+    'allauth.socialaccount',
+    'allauth.socialaccount.providers.openid_connect',
+    'allauth.socialaccount.providers.github',  # GitHub provider
+    'allauth.socialaccount.providers.google',  # Google provider
+    'django_extensions',  # Added for development tools
     
     # Local apps
-    'src.core',
-    'src.categories',
-    'src.accounts',
-    'src.products',
-    'src.orders',
+    'core',
+    'categories',
+    'accounts',
+    'products',
+    'orders',
 ]
 
 MIDDLEWARE = [
@@ -131,3 +141,165 @@ STATIC_URL = 'static/'
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# Custom User Model
+AUTH_USER_MODEL = 'accounts.User'
+
+# Django AllAuth Configuration
+SITE_ID = 1
+
+AUTHENTICATION_BACKENDS = [
+    # Django AllAuth authentication backends
+    'allauth.account.auth_backends.AuthenticationBackend',
+    # Django's default authentication backend
+    'django.contrib.auth.backends.ModelBackend',
+]
+
+# AllAuth settings
+ACCOUNT_EMAIL_REQUIRED = True
+ACCOUNT_UNIQUE_EMAIL = True
+ACCOUNT_USERNAME_REQUIRED = False
+ACCOUNT_AUTHENTICATION_METHOD = 'email'
+ACCOUNT_EMAIL_VERIFICATION = 'none'  # Change to 'mandatory' in production
+SOCIALACCOUNT_ADAPTER = 'accounts.adapters.CustomSocialAccountAdapter'
+
+# OIDC Provider settings
+# Replace these with your actual OIDC provider details
+SOCIALACCOUNT_PROVIDERS = {
+    'openid_connect': {
+        'SERVERS': [
+            {
+                'id': 'your-oidc-provider',
+                'name': 'Your OIDC Provider',
+                'server_url': 'https://your-oidc-provider.com',
+                'client_id': 'your-client-id',
+                'client_secret': 'your-client-secret',
+                'redirect_uri': 'http://localhost:8000/accounts/openid_connect/callback',
+                'authorization_endpoint': 'https://your-oidc-provider.com/authorize',
+                'token_endpoint': 'https://your-oidc-provider.com/token',
+                'userinfo_endpoint': 'https://your-oidc-provider.com/userinfo',
+                'jwks_uri': 'https://your-oidc-provider.com/jwks',
+            }
+        ]
+    },
+    'github': {
+        'APP': {
+            'client_id': 'YOUR_GITHUB_CLIENT_ID',
+            'secret': 'YOUR_GITHUB_CLIENT_SECRET',
+            'key': ''
+        },
+        'SCOPE': [
+            'user',
+            'email',
+        ],
+    },
+    'google': {
+        'APP': {
+            'client_id': 'YOUR_GOOGLE_CLIENT_ID',
+            'secret': 'YOUR_GOOGLE_CLIENT_SECRET',
+            'key': ''
+        },
+        'SCOPE': [
+            'profile',
+            'email',
+        ],
+        'AUTH_PARAMS': {
+            'access_type': 'online',
+        }
+    }
+}
+
+# Django REST Framework settings
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+        'rest_framework.authentication.SessionAuthentication',
+    ),
+    'DEFAULT_PERMISSION_CLASSES': (
+        'rest_framework.permissions.IsAuthenticated',
+    ),
+    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
+}
+
+# Simple JWT settings
+from datetime import timedelta
+
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=60),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=1),
+    'ROTATE_REFRESH_TOKENS': False,
+    'BLACKLIST_AFTER_ROTATION': True,
+    'UPDATE_LAST_LOGIN': False,
+    'ALGORITHM': 'HS256',
+    'SIGNING_KEY': SECRET_KEY,
+    'VERIFYING_KEY': None,
+    'AUTH_HEADER_TYPES': ('Bearer',),
+    'USER_ID_FIELD': 'id',
+    'USER_ID_CLAIM': 'user_id',
+    'AUTH_TOKEN_CLASSES': ('rest_framework_simplejwt.tokens.AccessToken',),
+    'TOKEN_TYPE_CLAIM': 'token_type',
+}
+
+# Login/logout redirect URLs
+LOGIN_REDIRECT_URL = '/'
+LOGOUT_REDIRECT_URL = '/'
+
+# DRF Spectacular settings
+SPECTACULAR_SETTINGS = {
+    'TITLE': 'Grocery API',
+    'DESCRIPTION': '''
+API for a grocery store management system
+
+## Authentication Options
+
+This API supports multiple authentication methods:
+
+1. **JWT Tokens**: Used for API authentication
+   - Get a token at `/api/token/`
+   - Include in requests as `Authorization: Bearer <token>`
+
+2. **OAuth/Social Authentication**: 
+   - View available providers: `/api/accounts/oauth/providers/`
+   - GitHub Login: `/api/accounts/oauth/github/`
+   - Google Login: `/api/accounts/oauth/google/`
+''',
+    'VERSION': '1.0.0',
+    'SERVE_INCLUDE_SCHEMA': False,
+    # Optional UI settings
+    'SWAGGER_UI_SETTINGS': {
+        'deepLinking': True,
+        'persistAuthorization': True,
+        'displayOperationId': True,
+    },
+    'COMPONENT_SPLIT_REQUEST': True,
+    'SORT_OPERATIONS': False,
+    # Security scheme definitions
+    'SECURITY_DEFINITIONS': {
+        'Bearer': {
+            'type': 'apiKey',
+            'in': 'header',
+            'name': 'Authorization',
+            'description': 'Enter: "Bearer <JWT token>"',
+        },
+        'OAuth2': {
+            'type': 'oauth2',
+            'flows': {
+                'authorizationCode': {
+                    'authorizationUrl': '/api/accounts/oauth/providers/',
+                    'tokenUrl': '/api/token/',
+                    'scopes': {
+                        'user': 'User information',
+                        'email': 'Email access',
+                    }
+                }
+            }
+        }
+    },
+    # Apply security globally to all operations
+    'SECURITY': [{'Bearer': []}],
+    # Customize operation tags
+    'TAGS': [
+        {'name': 'Authentication', 'description': 'Authentication endpoints including OAuth providers'},
+        {'name': 'token', 'description': 'JWT token management endpoints'},
+    ],
+}
