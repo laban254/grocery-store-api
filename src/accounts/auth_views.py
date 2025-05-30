@@ -241,13 +241,76 @@ class OAuthCallbackView(APIView):
         if not email:
             return Response({"error": "No email found in user information"}, status=400)
         
+        # Get or create user with OIDC information
         user, created = User.objects.get_or_create(
             email=email,
             defaults={
                 'username': user_info.get('login') or user_info.get('name', '').replace(' ', '_').lower(),
                 'is_active': True,
+                'oidc_id': user_info.get('id'),
+                'oidc_provider': self.provider_name,
+                'first_name': user_info.get('given_name', ''),
+                'last_name': user_info.get('family_name', ''),
             }
         )
+        
+        # Update OIDC info for existing users as well
+        if not created:
+            user.oidc_id = user_info.get('id')
+            user.oidc_provider = self.provider_name
+            if user_info.get('given_name') and not user.first_name:
+                user.first_name = user_info.get('given_name')
+            if user_info.get('family_name') and not user.last_name:
+                user.last_name = user_info.get('family_name')
+            user.save()
+        
+        # Get phone number if available
+        phone_number = None
+        if token_json.get('access_token'):  # Only try if we have a token
+            try:
+                phone_response = requests.get(
+                    'https://people.googleapis.com/v1/people/me',
+                    params={'personFields': 'phoneNumbers'},
+                    headers={'Authorization': f'Bearer {token_json["access_token"]}'}
+                )
+                if phone_response.status_code == 200:
+                    phone_data = phone_response.json()
+                    phone_numbers = phone_data.get('phoneNumbers', [])
+                    if phone_numbers:
+                        phone_number = phone_numbers[0].get('value')
+            except Exception as e:
+                # Log the error but continue without phone number
+                print(f"Error fetching phone number: {e}")
+        
+        # Create or update customer
+        from accounts.models import Customer
+        
+        try:
+            # Try to get existing customer
+            customer = Customer.objects.get(email=user.email)
+            customer_created = False
+            # Update customer information
+            customer.user = user
+            customer.first_name = user.first_name
+            customer.last_name = user.last_name
+            if phone_number and not customer.phone:
+                customer.phone = phone_number
+            customer.save()
+        except Customer.DoesNotExist:
+            # Create new customer
+            customer = Customer.objects.create(
+                user=user,
+                first_name=user.first_name,
+                last_name=user.last_name,
+                email=user.email,
+                phone=phone_number or ''  # Use phone number if available
+            )
+            customer_created = True
+        
+        # Update phone for existing customer if we got one
+        if phone_number and not customer_created and not customer.phone:
+            customer.phone = phone_number
+            customer.save()
         
         # Create or update social account
         social_account, _ = SocialAccount.objects.get_or_create(

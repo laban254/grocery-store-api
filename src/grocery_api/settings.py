@@ -210,8 +210,12 @@ SOCIALACCOUNT_PROVIDERS = {
             'key': ''
         },
         'SCOPE': [
+            'openid',  # Add OpenID Connect authentication
             'profile',
             'email',
+            'phone',  # Add phone scope
+            'https://www.googleapis.com/auth/userinfo.profile',  # More detailed profile info
+            'https://www.googleapis.com/auth/user.phonenumbers.read',  # Access to phone numbers
         ],
         'AUTH_PARAMS': {
             'access_type': 'online',
