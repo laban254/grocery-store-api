@@ -11,6 +11,12 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
 from pathlib import Path
+import os
+from datetime import timedelta
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv(Path(__file__).resolve().parent.parent.parent / '.env')
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -20,12 +26,12 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-=5^nu$^4(5q*za#-mb$o6cu$g7_zche=50f)ab%g%(-h(f#7#k'
+SECRET_KEY = os.environ.get('SECRET_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.environ.get('DEBUG', 'False').lower() == 'true'
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', '').split(',')
 
 
 # Application definition
@@ -48,7 +54,6 @@ INSTALLED_APPS = [
     'allauth.account',
     'allauth.socialaccount',
     'allauth.socialaccount.providers.openid_connect',
-    'allauth.socialaccount.providers.github',  # GitHub provider
     'allauth.socialaccount.providers.google',  # Google provider
     'django_extensions',  # Added for development tools
     
@@ -93,12 +98,28 @@ WSGI_APPLICATION = 'grocery_api.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+DATABASE_URL = os.environ.get('DATABASE_URL', 'sqlite:///db.sqlite3')
+
+if DATABASE_URL.startswith('sqlite'):
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
+        }
     }
-}
+else:
+    # For future use with PostgreSQL, MySQL, etc.
+    # You'll need to install dj-database-url for this
+    # import dj_database_url
+    # DATABASES = {
+    #     'default': dj_database_url.parse(DATABASE_URL),
+    # }
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
+        }
+    }
 
 
 # Password validation
@@ -169,34 +190,23 @@ SOCIALACCOUNT_PROVIDERS = {
     'openid_connect': {
         'SERVERS': [
             {
-                'id': 'your-oidc-provider',
-                'name': 'Your OIDC Provider',
-                'server_url': 'https://your-oidc-provider.com',
-                'client_id': 'your-client-id',
-                'client_secret': 'your-client-secret',
-                'redirect_uri': 'http://localhost:8000/accounts/openid_connect/callback',
-                'authorization_endpoint': 'https://your-oidc-provider.com/authorize',
-                'token_endpoint': 'https://your-oidc-provider.com/token',
-                'userinfo_endpoint': 'https://your-oidc-provider.com/userinfo',
-                'jwks_uri': 'https://your-oidc-provider.com/jwks',
+                'id': os.environ.get('OIDC_PROVIDER_ID', 'your-oidc-provider'),
+                'name': os.environ.get('OIDC_PROVIDER_NAME', 'Your OIDC Provider'),
+                'server_url': os.environ.get('OIDC_SERVER_URL', 'https://your-oidc-provider.com'),
+                'client_id': os.environ.get('OIDC_CLIENT_ID', 'your-client-id'),
+                'client_secret': os.environ.get('OIDC_CLIENT_SECRET', 'your-client-secret'),
+                'redirect_uri': os.environ.get('OIDC_REDIRECT_URI', 'http://localhost:8000/accounts/openid_connect/callback'),
+                'authorization_endpoint': os.environ.get('OIDC_AUTHORIZATION_ENDPOINT', 'https://your-oidc-provider.com/authorize'),
+                'token_endpoint': os.environ.get('OIDC_TOKEN_ENDPOINT', 'https://your-oidc-provider.com/token'),
+                'userinfo_endpoint': os.environ.get('OIDC_USERINFO_ENDPOINT', 'https://your-oidc-provider.com/userinfo'),
+                'jwks_uri': os.environ.get('OIDC_JWKS_URI', 'https://your-oidc-provider.com/jwks'),
             }
         ]
     },
-    'github': {
-        'APP': {
-            'client_id': 'YOUR_GITHUB_CLIENT_ID',
-            'secret': 'YOUR_GITHUB_CLIENT_SECRET',
-            'key': ''
-        },
-        'SCOPE': [
-            'user',
-            'email',
-        ],
-    },
     'google': {
         'APP': {
-            'client_id': 'YOUR_GOOGLE_CLIENT_ID',
-            'secret': 'YOUR_GOOGLE_CLIENT_SECRET',
+            'client_id': os.environ.get('GOOGLE_CLIENT_ID', 'YOUR_GOOGLE_CLIENT_ID'),
+            'secret': os.environ.get('GOOGLE_CLIENT_SECRET', 'YOUR_GOOGLE_CLIENT_SECRET'),
             'key': ''
         },
         'SCOPE': [
@@ -225,8 +235,8 @@ REST_FRAMEWORK = {
 from datetime import timedelta
 
 SIMPLE_JWT = {
-    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=60),
-    'REFRESH_TOKEN_LIFETIME': timedelta(days=1),
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=int(os.environ.get('JWT_ACCESS_TOKEN_LIFETIME_MINUTES', 60))),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=int(os.environ.get('JWT_REFRESH_TOKEN_LIFETIME_DAYS', 1))),
     'ROTATE_REFRESH_TOKENS': False,
     'BLACKLIST_AFTER_ROTATION': True,
     'UPDATE_LAST_LOGIN': False,
@@ -260,8 +270,11 @@ This API supports multiple authentication methods:
 
 2. **OAuth/Social Authentication**: 
    - View available providers: `/api/accounts/oauth/providers/`
-   - GitHub Login: `/api/accounts/oauth/github/`
+   - OpenID Connect: `/accounts/openid_connect/login/`
    - Google Login: `/api/accounts/oauth/google/`
+   
+   Callback endpoints:
+   - Google Callback: `/api/accounts/oauth/google/callback/` (receives code & state parameters from Google)
 ''',
     'VERSION': '1.0.0',
     'SERVE_INCLUDE_SCHEMA': False,
@@ -281,14 +294,14 @@ This API supports multiple authentication methods:
             'name': 'Authorization',
             'description': 'Enter: "Bearer <JWT token>"',
         },
-        'OAuth2': {
+        'OpenID Connect': {
             'type': 'oauth2',
             'flows': {
                 'authorizationCode': {
-                    'authorizationUrl': '/api/accounts/oauth/providers/',
+                    'authorizationUrl': '/accounts/openid_connect/login/',
                     'tokenUrl': '/api/token/',
                     'scopes': {
-                        'user': 'User information',
+                        'profile': 'User profile information',
                         'email': 'Email access',
                     }
                 }
@@ -302,4 +315,8 @@ This API supports multiple authentication methods:
         {'name': 'Authentication', 'description': 'Authentication endpoints including OAuth providers'},
         {'name': 'token', 'description': 'JWT token management endpoints'},
     ],
+    # Include pattern for callback URLs to ensure they are in the schema
+    'SCHEMA_PATH_PREFIX_INSERT': ['/api/accounts/oauth/'],
+    # Make sure callback endpoints are visible even without explicit schema decoration
+    'APPEND_COMPONENTS': {"schemas": {}},
 }

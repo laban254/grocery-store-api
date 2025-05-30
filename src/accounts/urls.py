@@ -1,6 +1,9 @@
 from django.urls import path
 from .views import CustomerProfileView, UserInfoView, OIDCTokenView
-from .auth_views import GitHubLoginView, GoogleLoginView, OAuthProvidersView
+from .auth_views import (
+    GoogleLoginView, OAuthProvidersView,
+    GoogleCallbackView
+)
 
 urlpatterns = [
     path('profile/', CustomerProfileView.as_view(), name='customer-profile'),
@@ -9,6 +12,8 @@ urlpatterns = [
     
     # OAuth API endpoints for Swagger documentation
     path('oauth/providers/', OAuthProvidersView.as_view(), name='api-oauth-providers'),
-    path('oauth/github/', GitHubLoginView.as_view(), name='api-github-login'),
     path('oauth/google/', GoogleLoginView.as_view(), name='api-google-login'),
+    
+    # OAuth callback endpoints
+    path('oauth/google/callback/', GoogleCallbackView.as_view(), name='api-google-callback'),
 ]
