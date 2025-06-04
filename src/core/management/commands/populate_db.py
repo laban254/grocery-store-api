@@ -79,7 +79,7 @@ class Command(BaseCommand):
         """
         Create sample user accounts with customer information.
         
-        Creates users with Kenyan names, contact information, and addresses
+        Creates users with  names, contact information, and addresses
         in Nairobi. Each user is created with a default password.
         """
         User.objects.filter(is_staff=False, is_superuser=False).delete()
@@ -108,12 +108,12 @@ class Command(BaseCommand):
     
     def create_products(self):
         """
-        Create realistic Kenyan grocery products for each category.
+        Create  grocery products for each category.
         
         Generates products for leaf categories (those without children) with:
-        - Kenyan-specific product names based on category
+        - product names based on category
         - Realistic prices and stock levels
-        - Descriptive text indicating Kenyan origin
+        - Descriptive text indicating  origin
         """
         Product.objects.all().delete()
         
@@ -126,7 +126,7 @@ class Command(BaseCommand):
             for i in range(random.randint(3, 5)):
                 if 'fruits' in category_name:
                     products = ['Mangoes', 'Bananas', 'Pineapples', 'Avocados', 'Passion Fruits']
-                    name = f"Kenyan {products[i % len(products)]}"
+                    name = f"{products[i % len(products)]}"
                 elif 'vegetables' in category_name:
                     products = ['Sukuma Wiki', 'Terere', 'Managu', 'Carrots', 'Tomatoes']
                     name = f"Fresh {products[i % len(products)]}"
@@ -146,7 +146,7 @@ class Command(BaseCommand):
                     'name': name,
                     'slug': slugify(name),
                     'category': category,
-                    'description': f"This is a quality {name.lower()} from Kenya, available in the {category.name} category.",
+                    'description': f"This is a quality {name.lower()}  available in the {category.name} category.",
                     'price': price,
                     'stock': stock,
                 })
