@@ -3,7 +3,6 @@ from rest_framework import status
 
 from .serializers import ProductSerializer, CategorySerializer
 
-# Helper functions to make response schemas more concise
 def create_success_example(title, data, message, status_code):
     """Create a standardized success response example for API documentation"""
     return {
@@ -84,7 +83,6 @@ def get_standard_responses(include=None, validation_type=None):
     return responses
 
 
-# Schema for listing products
 list_products_schema = {
     "summary": "List Products",
     "description": """
@@ -141,7 +139,6 @@ list_products_schema = {
 }
 
 
-# Schema for retrieving a single product
 retrieve_product_schema = {
     "summary": "Get Product Details",
     "description": "Retrieve detailed information about a specific product by ID.",
@@ -170,7 +167,6 @@ retrieve_product_schema = {
 }
 
 
-# Schema for category average price endpoint
 category_average_price_schema = {
     "summary": "Calculate Average Price for Category",
     "description": """
@@ -235,7 +231,6 @@ category_average_price_schema = {
 }
 
 
-# Schema for listing categories
 list_categories_schema = {
     "summary": "List Categories",
     "description": "Retrieve a list of all product categories with their hierarchical structure.",
@@ -281,7 +276,6 @@ list_categories_schema = {
 }
 
 
-# Schema for retrieving a single category
 retrieve_category_schema = {
     "summary": "Get Category Details",
     "description": "Retrieve detailed information about a specific category by ID.",

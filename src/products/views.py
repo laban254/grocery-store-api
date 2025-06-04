@@ -89,14 +89,11 @@ class ProductViewSet(mixins.ListModelMixin,
             )
         
         if include_subcategories:
-            # Get the category and all its descendants
             categories = category.get_descendants(include_self=True)
             queryset = self.get_queryset().filter(category__in=categories)
         else:
-            # Only include products directly in this category
             queryset = self.get_queryset().filter(category=category)
         
-        # Calculate the average price
         avg_price = queryset.aggregate(avg_price=Avg('price'))['avg_price'] or 0
             
         return Response({"average_price": avg_price})

@@ -58,16 +58,13 @@ class OrderCreateSerializer(serializers.Serializer):
         items_data = validated_data.pop('items')
         user = self.context['request'].user
         
-        # Generate order number
         order_number = f"ORD-{uuid.uuid4().hex[:6].upper()}"
         
-        # Calculate total amount
         total_amount = sum(
             item_data['product'].price * item_data['quantity']
             for item_data in items_data
         )
-        
-        # Create order
+
         order = Order.objects.create(
             user=user,
             order_number=order_number,

@@ -94,14 +94,14 @@ list_orders_schema = {
                     "id": 1,
                     "order_number": "ORD-AB12CD",
                     "total_amount": "42.99",
-                    "shipping_address": "123 Main St, Anytown, US",
+                    "shipping_address": "123 Nairobi, Kenya",
                     "created_at": "2025-06-01T10:30:00Z",
                 },
                 {
                     "id": 2,
                     "order_number": "ORD-EF34GH",
                     "total_amount": "29.45",
-                    "shipping_address": "456 Oak Ave, Sometown, US",
+                    "shipping_address": "456 kasarani, Kenya",
                     "created_at": "2025-06-03T14:15:00Z",
                 },
             ],
@@ -124,7 +124,7 @@ retrieve_order_schema = {
                 "id": 1,
                 "order_number": "ORD-AB12CD",
                 "total_amount": "42.99",
-                "shipping_address": "123 Main St, Anytown, US",
+                "shipping_address": "123 Westlands, Nairobi, Kenya",
                 "created_at": "2025-06-01T10:30:00Z",
             },
             message="Order retrieved successfully",
@@ -149,7 +149,7 @@ create_order_schema = {
                 "id": 3,
                 "order_number": "ORD-IJ56KL",
                 "total_amount": "55.97",
-                "shipping_address": "789 Pine Ln, Othertown, US",
+                "shipping_address": "789 Moi Avenue, Nairobi, Kenya",
                 "created_at": "2025-06-04T09:45:00Z",
             },
             message="Order created successfully",
@@ -163,7 +163,7 @@ create_order_schema = {
             summary="Create order with single item",
             description="Basic order with one product.",
             value={
-                "shipping_address": "123 Main St, Anytown, US",
+                "shipping_address": "123 Kenyatta Avenue, Nairobi, Kenya",
                 "items": [
                     {
                         "product_id": 1,
@@ -178,7 +178,7 @@ create_order_schema = {
             summary="Create order with multiple items",
             description="Order with multiple products of different quantities.",
             value={
-                "shipping_address": "456 Oak Ave, Sometown, US",
+                "shipping_address": "456 Ngong Road, Kilimani, Nairobi, Kenya",
                 "items": [
                     {
                         "product_id": 1,
