@@ -12,6 +12,9 @@ class CustomUserAdmin(UserAdmin):
     list_display = ('email', 'username', 'full_name', 'phone', 'is_staff', 'created_at')
     ordering = ('email',)
     search_fields = ('email', 'username', 'first_name', 'last_name', 'phone', 'address')
+    list_filter = ('is_staff', 'is_active', 'created_at')
+    date_hierarchy = 'created_at'
+    list_per_page = 20
     
     fieldsets = (
         (None, {'fields': ('email', 'password')}),
@@ -29,3 +32,7 @@ class CustomUserAdmin(UserAdmin):
     )
     
     readonly_fields = ('created_at', 'updated_at')
+    
+    def full_name(self, obj):
+        return obj.get_full_name() or "-"
+    full_name.short_description = _('Full Name')

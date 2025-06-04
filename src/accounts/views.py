@@ -3,8 +3,10 @@ from rest_framework import generics, permissions, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
+from drf_spectacular.utils import extend_schema
 from .models import User
 from .serializers import UserSerializer, UserUpdateSerializer
+from .schemas import get_user_profile_schema, update_user_profile_schema, oidc_token_schema
 
 
 class UserProfileView(generics.RetrieveUpdateAPIView):
@@ -24,6 +26,18 @@ class UserProfileView(generics.RetrieveUpdateAPIView):
         """
         return self.request.user
     
+    @extend_schema(**get_user_profile_schema)
+    def get(self, request, *args, **kwargs):
+        return super().get(request, *args, **kwargs)
+    
+    @extend_schema(**update_user_profile_schema)
+    def put(self, request, *args, **kwargs):
+        return super().put(request, *args, **kwargs)
+    
+    @extend_schema(**update_user_profile_schema)
+    def patch(self, request, *args, **kwargs):
+        return super().patch(request, *args, **kwargs)
+    
     def update(self, request, *args, **kwargs):
         """
         Update the user's profile.
@@ -41,6 +55,7 @@ class UserInfoView(APIView):
     """
     permission_classes = [permissions.IsAuthenticated]
     
+    @extend_schema(**get_user_profile_schema)
     def get(self, request, *args, **kwargs):
         """
         Get user information including any OIDC-specific data.
@@ -77,6 +92,7 @@ class OIDCTokenView(APIView):
     """
     permission_classes = [permissions.IsAuthenticated]
     
+    @extend_schema(**oidc_token_schema)
     def post(self, request, *args, **kwargs):
         """
         Generate JWT tokens for the authenticated user.

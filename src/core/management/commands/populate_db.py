@@ -2,9 +2,8 @@ import os
 import random
 from django.core.management.base import BaseCommand
 from django.utils.text import slugify
-from categories.models import Category
-from accounts.models import Customer
-from products.models import Product
+from products.models import Category, Product
+from accounts.models import User
 from orders.models import Order, OrderItem
 
 

@@ -59,7 +59,6 @@ INSTALLED_APPS = [
     
     # Local apps
     'core',
-    'categories',
     'accounts',
     'products',
     'orders',
@@ -263,22 +262,6 @@ SPECTACULAR_SETTINGS = {
     'TITLE': 'Grocery API',
     'DESCRIPTION': '''
 API for a grocery store management system
-
-## Authentication Options
-
-This API supports multiple authentication methods:
-
-1. **JWT Tokens**: Used for API authentication
-   - Get a token at `/api/token/`
-   - Include in requests as `Authorization: Bearer <token>`
-
-2. **OAuth/Social Authentication**: 
-   - View available providers: `/api/accounts/oauth/providers/`
-   - OpenID Connect: `/accounts/openid_connect/login/`
-   - Google Login: `/api/accounts/oauth/google/`
-   
-   Callback endpoints:
-   - Google Callback: `/api/accounts/oauth/google/callback/` (receives code & state parameters from Google)
 ''',
     'VERSION': '1.0.0',
     'SERVE_INCLUDE_SCHEMA': False,
@@ -297,27 +280,14 @@ This API supports multiple authentication methods:
             'in': 'header',
             'name': 'Authorization',
             'description': 'Enter: "Bearer <JWT token>"',
-        },
-        'OpenID Connect': {
-            'type': 'oauth2',
-            'flows': {
-                'authorizationCode': {
-                    'authorizationUrl': '/accounts/openid_connect/login/',
-                    'tokenUrl': '/api/token/',
-                    'scopes': {
-                        'profile': 'User profile information',
-                        'email': 'Email access',
-                    }
-                }
-            }
         }
     },
     # Apply security globally to all operations
     'SECURITY': [{'Bearer': []}],
     # Customize operation tags
     'TAGS': [
-        {'name': 'Authentication', 'description': 'Authentication endpoints including OAuth providers'},
-        {'name': 'token', 'description': 'JWT token management endpoints'},
+        {'name': 'Products', 'description': 'Product management endpoints'},
+        {'name': 'Orders', 'description': 'Order management endpoints'},
     ],
     # Include pattern for callback URLs to ensure they are in the schema
     'SCHEMA_PATH_PREFIX_INSERT': '',
