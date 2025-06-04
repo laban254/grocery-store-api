@@ -1,7 +1,6 @@
 from celery import shared_task
-
-from .models import Order
 from .services import send_sms
+from .models import Order
 
 
 @shared_task
@@ -55,7 +54,7 @@ def send_order_status_update_sms(order_id, status):
             "processing": f"Hi {name}, order #{num} processing.",
             "shipped": f"Hi {name}, order #{num} shipped!",
             "delivered": f"Hi {name}, order #{num} delivered!",
-            "cancelled": f"Hi {name}, order #{num} cancelled.",
+            "cancelled": f"Hi {name}, order #{num} cancelled."
         }
 
         # Default message

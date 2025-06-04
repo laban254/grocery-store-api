@@ -1,7 +1,6 @@
 from drf_spectacular.utils import OpenApiExample, OpenApiParameter, OpenApiTypes
 from rest_framework import status
 
-from .serializers import ProductSerializer, CategorySerializer
 
 def create_success_example(title, data, message, status_code):
     """Create a standardized success response example for API documentation"""
@@ -77,7 +76,7 @@ def get_standard_responses(include=None, validation_type=None):
             }
         },
     }
-    
+
     if include:
         return {k: v for k, v in responses.items() if k in include}
     return responses
@@ -220,7 +219,10 @@ category_average_price_schema = {
         OpenApiExample(
             "Produce with Subcategories",
             summary="Calculate for Produce including subcategories",
-            description="Get average price for all products in Produce and all its subcategories (Fruits, Vegetables, etc.)",
+            description=(
+                "Get average price for all products in Produce and its subcategories "
+                "(Fruits, Vegetables, etc.)"
+            ),
             value={
                 "category_id": 2,
                 "include_subcategories": True,

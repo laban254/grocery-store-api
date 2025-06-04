@@ -1,4 +1,5 @@
 import logging
+
 import africastalking
 from django.conf import settings
 
@@ -8,7 +9,8 @@ africastalking.initialize(username, api_key)
 
 sms_service = africastalking.SMS
 
-logger = logging.getLogger('customer_orders') 
+logger = logging.getLogger("customer_orders")
+
 
 def send_sms(phone_number, message):
     """
@@ -23,9 +25,9 @@ def send_sms(phone_number, message):
     """
     try:
         response = sms_service.send(message, [phone_number])
-        logger.info('SMS sent successfully to %s: %s', phone_number, message)
+        logger.info("SMS sent successfully to %s: %s", phone_number, message)
         return {"status": "success", "response": response}
-    
+
     except Exception as e:
-        logger.error('Failed to send SMS to %s: %s', phone_number, str(e))
+        logger.error("Failed to send SMS to %s: %s", phone_number, str(e))
         return {"status": "error", "message": str(e)}

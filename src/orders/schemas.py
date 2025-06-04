@@ -1,5 +1,6 @@
-from drf_spectacular.utils import OpenApiExample, OpenApiParameter, OpenApiTypes
+from drf_spectacular.utils import OpenApiExample
 from rest_framework import status
+
 
 # Helper functions to make response schemas more concise
 def create_success_example(title, data, message, status_code):
@@ -76,7 +77,7 @@ def get_standard_responses(include=None, validation_type=None):
             }
         },
     }
-    
+
     if include:
         return {k: v for k, v in responses.items() if k in include}
     return responses
@@ -164,12 +165,7 @@ create_order_schema = {
             description="Basic order with one product.",
             value={
                 "shipping_address": "123 Kenyatta Avenue, Nairobi, Kenya",
-                "items": [
-                    {
-                        "product_id": 1,
-                        "quantity": 2
-                    }
-                ]
+                "items": [{"product_id": 1, "quantity": 2}],
             },
             request_only=True,
         ),
@@ -180,19 +176,10 @@ create_order_schema = {
             value={
                 "shipping_address": "456 Ngong Road, Kilimani, Nairobi, Kenya",
                 "items": [
-                    {
-                        "product_id": 1,
-                        "quantity": 1
-                    },
-                    {
-                        "product_id": 2,
-                        "quantity": 3
-                    },
-                    {
-                        "product_id": 5,
-                        "quantity": 2
-                    }
-                ]
+                    {"product_id": 1, "quantity": 1},
+                    {"product_id": 2, "quantity": 3},
+                    {"product_id": 5, "quantity": 2},
+                ],
             },
             request_only=True,
         ),

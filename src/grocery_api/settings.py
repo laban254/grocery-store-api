@@ -10,13 +10,21 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
-from pathlib import Path
 import os
 from datetime import timedelta
-from dotenv import load_dotenv
+from pathlib import Path
 
-# Load environment variables from .env file
-load_dotenv(Path(__file__).resolve().parent.parent.parent / '.env')
+# Try to import dotenv, but make it optional
+try:
+    from dotenv import load_dotenv
+
+    # Load environment variables from .env file
+    load_dotenv(Path(__file__).resolve().parent.parent.parent / ".env")
+except ImportError:
+    # python-dotenv is not installed, provide a fallback
+    print(
+        "Warning: dotenv module not found. Environment variables from .env file will not be loaded."
+    )
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -26,84 +34,93 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.environ.get('SECRET_KEY')
+SECRET_KEY = os.environ.get("SECRET_KEY")
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.environ.get('DEBUG', 'False').lower() == 'true'
+DEBUG = os.environ.get("DEBUG", "False").lower() == "true"
 
-ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', '').split(',')
+ALLOWED_HOSTS = os.environ.get("ALLOWED_HOSTS", "").split(",")
 
 
 # Application definition
 
 INSTALLED_APPS = [
-    'django.contrib.admin',
-    'django.contrib.auth',
-    'django.contrib.contenttypes',
-    'django.contrib.sessions',
-    'django.contrib.messages',
-    'django.contrib.staticfiles',
-    'django.contrib.sites',  # Required for django-allauth
-    
+    "django.contrib.admin",
+    "django.contrib.auth",
+    "django.contrib.contenttypes",
+    "django.contrib.sessions",
+    "django.contrib.messages",
+    "django.contrib.staticfiles",
+    "django.contrib.sites",  # Required for django-allauth
     # Third-party apps
-    'mptt',
-    'rest_framework',
-    'rest_framework_simplejwt',
-    'drf_spectacular',
-    'allauth',
-    'allauth.account',
-    'allauth.socialaccount',
-    'allauth.socialaccount.providers.openid_connect',
-    'allauth.socialaccount.providers.google',  # Google provider
-    'django_extensions',  # Added for development tools
-    
+]
+
+# Try to import optional dependencies
+try:
+    import mptt  # noqa: F401 - imported only for existence check
+
+    INSTALLED_APPS.append("mptt")
+except ImportError:
+    print("Warning: django-mptt not found. Tree-based models may not work correctly.")
+
+# Continue with required apps
+INSTALLED_APPS += [
+    "rest_framework",
+    "rest_framework_simplejwt",
+    "drf_spectacular",
+    "allauth",
+    "allauth.account",
+    "allauth.socialaccount",
+    "allauth.socialaccount.providers.openid_connect",
+    "allauth.socialaccount.providers.google",  # Google provider
+    "django_extensions",  # Added for development tools
     # Local apps
-    'core',
-    'accounts',
-    'products',
-    'orders',
+    "core",
+    "accounts",
+    "products",
+    "orders",
 ]
 
 MIDDLEWARE = [
-    'django.middleware.security.SecurityMiddleware',
-    'django.contrib.sessions.middleware.SessionMiddleware',
-    'django.middleware.common.CommonMiddleware',
-    'django.middleware.csrf.CsrfViewMiddleware',
-    'django.contrib.auth.middleware.AuthenticationMiddleware',
-    'django.contrib.messages.middleware.MessageMiddleware',
-    'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    "django.middleware.security.SecurityMiddleware",
+    "django.contrib.sessions.middleware.SessionMiddleware",
+    "django.middleware.common.CommonMiddleware",
+    "django.middleware.csrf.CsrfViewMiddleware",
+    "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "django.contrib.messages.middleware.MessageMiddleware",
+    "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
 
-ROOT_URLCONF = 'grocery_api.urls'
+ROOT_URLCONF = "grocery_api.urls"
 
 TEMPLATES = [
     {
-        'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
-        'APP_DIRS': True,
-        'OPTIONS': {
-            'context_processors': [
-                'django.template.context_processors.request',
-                'django.contrib.auth.context_processors.auth',
-                'django.contrib.messages.context_processors.messages',
+        "BACKEND": "django.template.backends.django.DjangoTemplates",
+        "DIRS": [],
+        "APP_DIRS": True,
+        "OPTIONS": {
+            "context_processors": [
+                "django.template.context_processors.request",
+                "django.contrib.auth.context_processors.auth",
+                "django.contrib.messages.context_processors.messages",
             ],
         },
     },
 ]
 
-WSGI_APPLICATION = 'grocery_api.wsgi.application'
+WSGI_APPLICATION = "grocery_api.wsgi.application"
 
 
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
-DATABASE_URL = os.environ.get('DATABASE_URL', 'sqlite:///db.sqlite3')
+DATABASE_URL = os.environ.get("DATABASE_URL", "sqlite:///db.sqlite3")
 
-if DATABASE_URL.startswith('sqlite'):
+if DATABASE_URL.startswith("sqlite"):
     DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.sqlite3',
-            'NAME': BASE_DIR / 'db.sqlite3',
+        "default": {
+            "ENGINE": "django.db.backends.sqlite3",
+            "NAME": BASE_DIR / "db.sqlite3",
         }
     }
 else:
@@ -114,9 +131,9 @@ else:
     #     'default': dj_database_url.parse(DATABASE_URL),
     # }
     DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.sqlite3',
-            'NAME': BASE_DIR / 'db.sqlite3',
+        "default": {
+            "ENGINE": "django.db.backends.sqlite3",
+            "NAME": BASE_DIR / "db.sqlite3",
         }
     }
 
@@ -126,16 +143,16 @@ else:
 
 AUTH_PASSWORD_VALIDATORS = [
     {
-        'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
+        "NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator",
     },
     {
-        'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
+        "NAME": "django.contrib.auth.password_validation.MinimumLengthValidator",
     },
     {
-        'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
+        "NAME": "django.contrib.auth.password_validation.CommonPasswordValidator",
     },
     {
-        'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
+        "NAME": "django.contrib.auth.password_validation.NumericPasswordValidator",
     },
 ]
 
@@ -143,9 +160,9 @@ AUTH_PASSWORD_VALIDATORS = [
 # Internationalization
 # https://docs.djangoproject.com/en/5.2/topics/i18n/
 
-LANGUAGE_CODE = 'en-us'
+LANGUAGE_CODE = "en-us"
 
-TIME_ZONE = 'UTC'
+TIME_ZONE = "UTC"
 
 USE_I18N = True
 
@@ -155,139 +172,147 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
-STATIC_URL = 'static/'
+STATIC_URL = "static/"
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
-DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 # Custom User Model
-AUTH_USER_MODEL = 'accounts.User'
+AUTH_USER_MODEL = "accounts.User"
 
 # Django AllAuth Configuration
 SITE_ID = 1
 
 AUTHENTICATION_BACKENDS = [
     # Django AllAuth authentication backends
-    'allauth.account.auth_backends.AuthenticationBackend',
+    "allauth.account.auth_backends.AuthenticationBackend",
     # Django's default authentication backend
-    'django.contrib.auth.backends.ModelBackend',
+    "django.contrib.auth.backends.ModelBackend",
 ]
 
 # AllAuth settings
 ACCOUNT_EMAIL_REQUIRED = True
 ACCOUNT_UNIQUE_EMAIL = True
 ACCOUNT_USERNAME_REQUIRED = False
-ACCOUNT_AUTHENTICATION_METHOD = 'email'
-ACCOUNT_EMAIL_VERIFICATION = 'none'  # Change to 'mandatory' in production
-SOCIALACCOUNT_ADAPTER = 'accounts.adapters.CustomSocialAccountAdapter'
+ACCOUNT_AUTHENTICATION_METHOD = "email"
+ACCOUNT_EMAIL_VERIFICATION = "none"  # Change to 'mandatory' in production
+SOCIALACCOUNT_ADAPTER = "accounts.adapters.CustomSocialAccountAdapter"
 
 # OIDC Provider settings
 # Replace these with your actual OIDC provider details
 SOCIALACCOUNT_PROVIDERS = {
-    'openid_connect': {
-        'SERVERS': [
+    "openid_connect": {
+        "SERVERS": [
             {
-                'id': os.environ.get('OIDC_PROVIDER_ID', 'your-oidc-provider'),
-                'name': os.environ.get('OIDC_PROVIDER_NAME', 'Your OIDC Provider'),
-                'server_url': os.environ.get('OIDC_SERVER_URL', 'https://your-oidc-provider.com'),
-                'client_id': os.environ.get('OIDC_CLIENT_ID', 'your-client-id'),
-                'client_secret': os.environ.get('OIDC_CLIENT_SECRET', 'your-client-secret'),
-                'redirect_uri': os.environ.get('OIDC_REDIRECT_URI', 'http://localhost:8000/accounts/openid_connect/callback'),
-                'authorization_endpoint': os.environ.get('OIDC_AUTHORIZATION_ENDPOINT', 'https://your-oidc-provider.com/authorize'),
-                'token_endpoint': os.environ.get('OIDC_TOKEN_ENDPOINT', 'https://your-oidc-provider.com/token'),
-                'userinfo_endpoint': os.environ.get('OIDC_USERINFO_ENDPOINT', 'https://your-oidc-provider.com/userinfo'),
-                'jwks_uri': os.environ.get('OIDC_JWKS_URI', 'https://your-oidc-provider.com/jwks'),
+                "id": os.environ.get("OIDC_PROVIDER_ID", "your-oidc-provider"),
+                "name": os.environ.get("OIDC_PROVIDER_NAME", "Your OIDC Provider"),
+                "server_url": os.environ.get("OIDC_SERVER_URL", "https://your-oidc-provider.com"),
+                "client_id": os.environ.get("OIDC_CLIENT_ID", "your-client-id"),
+                "client_secret": os.environ.get("OIDC_CLIENT_SECRET", "your-client-secret"),
+                "redirect_uri": os.environ.get(
+                    "OIDC_REDIRECT_URI", "http://localhost:8000/accounts/openid_connect/callback"
+                ),
+                "authorization_endpoint": os.environ.get(
+                    "OIDC_AUTHORIZATION_ENDPOINT", "https://your-oidc-provider.com/authorize"
+                ),
+                "token_endpoint": os.environ.get(
+                    "OIDC_TOKEN_ENDPOINT", "https://your-oidc-provider.com/token"
+                ),
+                "userinfo_endpoint": os.environ.get(
+                    "OIDC_USERINFO_ENDPOINT", "https://your-oidc-provider.com/userinfo"
+                ),
+                "jwks_uri": os.environ.get("OIDC_JWKS_URI", "https://your-oidc-provider.com/jwks"),
             }
         ]
     },
-    'google': {
-        'APP': {
-            'client_id': os.environ.get('GOOGLE_CLIENT_ID', 'YOUR_GOOGLE_CLIENT_ID'),
-            'secret': os.environ.get('GOOGLE_CLIENT_SECRET', 'YOUR_GOOGLE_CLIENT_SECRET'),
-            'key': ''
+    "google": {
+        "APP": {
+            "client_id": os.environ.get("GOOGLE_CLIENT_ID", "YOUR_GOOGLE_CLIENT_ID"),
+            "secret": os.environ.get("GOOGLE_CLIENT_SECRET", "YOUR_GOOGLE_CLIENT_SECRET"),
+            "key": "",
         },
-        'SCOPE': [
-            'openid',  # Add OpenID Connect authentication
-            'profile',
-            'email',
-            'phone',  # Add phone scope
-            'https://www.googleapis.com/auth/userinfo.profile',  # More detailed profile info
-            'https://www.googleapis.com/auth/user.phonenumbers.read',  # Access to phone numbers
+        "SCOPE": [
+            "openid",  # Add OpenID Connect authentication
+            "profile",
+            "email",
+            "phone",  # Add phone scope
+            "https://www.googleapis.com/auth/userinfo.profile",  # More detailed profile info
+            "https://www.googleapis.com/auth/user.phonenumbers.read",  # Access to phone numbers
         ],
-        'AUTH_PARAMS': {
-            'access_type': 'online',
-        }
-    }
+        "AUTH_PARAMS": {
+            "access_type": "online",
+        },
+    },
 }
 
 # Django REST Framework settings
 REST_FRAMEWORK = {
-    'DEFAULT_AUTHENTICATION_CLASSES': (
-        'rest_framework_simplejwt.authentication.JWTAuthentication',
-        'rest_framework.authentication.SessionAuthentication',
+    "DEFAULT_AUTHENTICATION_CLASSES": (
+        "rest_framework_simplejwt.authentication.JWTAuthentication",
+        "rest_framework.authentication.SessionAuthentication",
     ),
-    'DEFAULT_PERMISSION_CLASSES': (
-        'rest_framework.permissions.IsAuthenticated',
-    ),
-    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
+    "DEFAULT_PERMISSION_CLASSES": ("rest_framework.permissions.IsAuthenticated",),
+    "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
 }
 
 # Simple JWT settings
-from datetime import timedelta
-
 SIMPLE_JWT = {
-    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=int(os.environ.get('JWT_ACCESS_TOKEN_LIFETIME_MINUTES', 60))),
-    'REFRESH_TOKEN_LIFETIME': timedelta(days=int(os.environ.get('JWT_REFRESH_TOKEN_LIFETIME_DAYS', 1))),
-    'ROTATE_REFRESH_TOKENS': False,
-    'BLACKLIST_AFTER_ROTATION': True,
-    'UPDATE_LAST_LOGIN': False,
-    'ALGORITHM': 'HS256',
-    'SIGNING_KEY': SECRET_KEY,
-    'VERIFYING_KEY': None,
-    'AUTH_HEADER_TYPES': ('Bearer',),
-    'USER_ID_FIELD': 'id',
-    'USER_ID_CLAIM': 'user_id',
-    'AUTH_TOKEN_CLASSES': ('rest_framework_simplejwt.tokens.AccessToken',),
-    'TOKEN_TYPE_CLAIM': 'token_type',
+    "ACCESS_TOKEN_LIFETIME": timedelta(
+        minutes=int(os.environ.get("JWT_ACCESS_TOKEN_LIFETIME_MINUTES", 60))
+    ),
+    "REFRESH_TOKEN_LIFETIME": timedelta(
+        days=int(os.environ.get("JWT_REFRESH_TOKEN_LIFETIME_DAYS", 1))
+    ),
+    "ROTATE_REFRESH_TOKENS": False,
+    "BLACKLIST_AFTER_ROTATION": True,
+    "UPDATE_LAST_LOGIN": False,
+    "ALGORITHM": "HS256",
+    "SIGNING_KEY": SECRET_KEY,
+    "VERIFYING_KEY": None,
+    "AUTH_HEADER_TYPES": ("Bearer",),
+    "USER_ID_FIELD": "id",
+    "USER_ID_CLAIM": "user_id",
+    "AUTH_TOKEN_CLASSES": ("rest_framework_simplejwt.tokens.AccessToken",),
+    "TOKEN_TYPE_CLAIM": "token_type",
 }
 
 # Login/logout redirect URLs
-LOGIN_REDIRECT_URL = '/'
-LOGOUT_REDIRECT_URL = '/'
+LOGIN_REDIRECT_URL = "/"
+LOGOUT_REDIRECT_URL = "/"
 
 # DRF Spectacular settings
 SPECTACULAR_SETTINGS = {
-    'TITLE': 'Grocery API',
-    'DESCRIPTION': '''
+    "TITLE": "Grocery API",
+    "DESCRIPTION": """
 API for a grocery store management system
-''',
-    'VERSION': '1.0.0',
-    'SERVE_INCLUDE_SCHEMA': False,
+""",
+    "VERSION": "1.0.0",
+    "SERVE_INCLUDE_SCHEMA": False,
     # Optional UI settings
-    'SWAGGER_UI_SETTINGS': {
-        'deepLinking': True,
-        'persistAuthorization': True,
-        'displayOperationId': True,
+    "SWAGGER_UI_SETTINGS": {
+        "deepLinking": True,
+        "persistAuthorization": True,
+        "displayOperationId": True,
     },
-    'COMPONENT_SPLIT_REQUEST': True,
-    'SORT_OPERATIONS': False,
+    "COMPONENT_SPLIT_REQUEST": True,
+    "SORT_OPERATIONS": False,
     # Security scheme definitions
-    'SECURITY_DEFINITIONS': {
-        'Bearer': {
-            'type': 'apiKey',
-            'in': 'header',
-            'name': 'Authorization',
-            'description': 'Enter: "Bearer <JWT token>"',
+    "SECURITY_DEFINITIONS": {
+        "Bearer": {
+            "type": "apiKey",
+            "in": "header",
+            "name": "Authorization",
+            "description": 'Enter: "Bearer <JWT token>"',
         }
     },
     # Apply security globally to all operations
-    'SECURITY': [{'Bearer': []}],
+    "SECURITY": [{"Bearer": []}],
     # Include pattern for callback URLs to ensure they are in the schema
-    'SCHEMA_PATH_PREFIX_INSERT': '',
+    "SCHEMA_PATH_PREFIX_INSERT": "",
     # Make sure callback endpoints are visible even without explicit schema decoration
-    'APPEND_COMPONENTS': {"schemas": {}},
+    "APPEND_COMPONENTS": {"schemas": {}},
 }
 
 # Africa's Talking SMS API Configuration
@@ -295,17 +320,19 @@ API for a grocery store management system
 # 1. Username must be 'sandbox'
 # 2. Use sandbox API key from Africa's Talking dashboard
 # 3. Phone numbers must be registered in sandbox environment
-AFRICAS_TALKING_ENVIRONMENT = os.environ.get('AFRICAS_TALKING_ENVIRONMENT', 'sandbox')
-AFRICAS_TALKING_API_KEY = os.environ.get('AFRICAS_TALKING_API_KEY')
+AFRICAS_TALKING_ENVIRONMENT = os.environ.get("AFRICAS_TALKING_ENVIRONMENT", "sandbox")
+AFRICAS_TALKING_API_KEY = os.environ.get("AFRICAS_TALKING_API_KEY")
 
 # These settings are only used in production mode
-AFRICAS_TALKING_USERNAME = os.environ.get('AFRICAS_TALKING_USERNAME', 'sandbox')
-AFRICAS_TALKING_SENDER_ID = os.environ.get('AFRICAS_TALKING_SENDER_ID')  # Optional, for branded messages
+AFRICAS_TALKING_USERNAME = os.environ.get("AFRICAS_TALKING_USERNAME", "sandbox")
+AFRICAS_TALKING_SENDER_ID = os.environ.get(
+    "AFRICAS_TALKING_SENDER_ID"
+)  # Optional, for branded messages
 
 # Celery Configuration
-CELERY_BROKER_URL = 'redis://localhost:6379/0'
-CELERY_RESULT_BACKEND = 'redis://localhost:6379/0'
-CELERY_ACCEPT_CONTENT = ['json']
-CELERY_TASK_SERIALIZER = 'json'
-CELERY_RESULT_SERIALIZER = 'json'
+CELERY_BROKER_URL = "redis://localhost:6379/0"
+CELERY_RESULT_BACKEND = "redis://localhost:6379/0"
+CELERY_ACCEPT_CONTENT = ["json"]
+CELERY_TASK_SERIALIZER = "json"
+CELERY_RESULT_SERIALIZER = "json"
 CELERY_TIMEZONE = TIME_ZONE

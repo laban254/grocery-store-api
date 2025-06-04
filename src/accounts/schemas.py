@@ -1,5 +1,6 @@
-from drf_spectacular.utils import OpenApiExample, OpenApiParameter, OpenApiTypes
+from drf_spectacular.utils import OpenApiExample
 from rest_framework import status
+
 
 # Helper functions to make response schemas more concise
 def create_success_example(title, data, message, status_code):
@@ -76,7 +77,7 @@ def get_standard_responses(include=None, validation_type=None):
             }
         },
     }
-    
+
     if include:
         return {k: v for k, v in responses.items() if k in include}
     return responses
@@ -144,7 +145,7 @@ update_user_profile_schema = {
                 "first_name": "John",
                 "last_name": "Doe",
                 "phone": "555-987-6543",
-                "address": "456 Oak Ave, Sometown, US"
+                "address": "456 Oak Ave, Sometown, US",
             },
             request_only=True,
         ),
@@ -152,10 +153,7 @@ update_user_profile_schema = {
             "Update Name Only",
             summary="Update user's name",
             description="Update first and last name only.",
-            value={
-                "first_name": "Johnny",
-                "last_name": "Doe"
-            },
+            value={"first_name": "Johnny", "last_name": "Doe"},
             request_only=True,
         ),
     ],
@@ -171,8 +169,14 @@ oidc_token_schema = {
             "schema": {
                 "type": "object",
                 "properties": {
-                    "refresh": {"type": "string", "example": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9..."},
-                    "access": {"type": "string", "example": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9..."},
+                    "refresh": {
+                        "type": "string",
+                        "example": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...",
+                    },
+                    "access": {
+                        "type": "string",
+                        "example": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...",
+                    },
                 },
             },
         },

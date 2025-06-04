@@ -6,6 +6,7 @@ class CustomSocialAccountAdapter(DefaultSocialAccountAdapter):
     """
     Custom adapter for social accounts that handles OIDC authentication.
     """
+
     def save_user(self, request, sociallogin, form=None):
         """
         Save the user with OIDC information.
@@ -13,23 +14,23 @@ class CustomSocialAccountAdapter(DefaultSocialAccountAdapter):
         with transaction.atomic():
             # First, save the user using the default adapter
             user = super().save_user(request, sociallogin, form)
-            
+
             # Get user info from the social account
             user_data = sociallogin.account.extra_data
-            
+
             # Store OIDC-specific information
             user.oidc_id = sociallogin.account.uid
             user.oidc_provider = sociallogin.account.provider
-            
+
             # Update user fields from OIDC data
-            first_name = user_data.get('given_name', user.first_name)
-            last_name = user_data.get('family_name', user.last_name)
-            
+            first_name = user_data.get("given_name", user.first_name)
+            last_name = user_data.get("family_name", user.last_name)
+
             if first_name:
                 user.first_name = first_name
             if last_name:
                 user.last_name = last_name
-            
+
             user.save()
-                
+
         return user

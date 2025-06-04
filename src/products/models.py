@@ -15,22 +15,19 @@ class Category(MPTTModel):
             - Fruits
             - Vegetables
     """
+
     name = models.CharField(max_length=100, unique=True)
     slug = models.SlugField(max_length=120, unique=True)
     parent = TreeForeignKey(
-        'self',
-        on_delete=models.CASCADE,
-        null=True,
-        blank=True,
-        related_name='children'
+        "self", on_delete=models.CASCADE, null=True, blank=True, related_name="children"
     )
 
     class MPTTMeta:
-        order_insertion_by = ['name']
+        order_insertion_by = ["name"]
 
     class Meta:
-        verbose_name = 'Category'
-        verbose_name_plural = 'Categories'
+        verbose_name = "Category"
+        verbose_name_plural = "Categories"
 
     def __str__(self):
         return self.name
@@ -45,13 +42,10 @@ class Product(models.Model):
     """
     Simple product model with category relationship.
     """
+
     name = models.CharField(max_length=200)
     slug = models.SlugField(max_length=220, unique=True)
-    category = TreeForeignKey(
-        Category,
-        on_delete=models.CASCADE,
-        related_name='products'
-    )
+    category = TreeForeignKey(Category, on_delete=models.CASCADE, related_name="products")
     description = models.TextField(blank=True)
     price = models.DecimalField(max_digits=10, decimal_places=2)
     stock = models.PositiveIntegerField(default=0)
@@ -59,7 +53,7 @@ class Product(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        ordering = ['name']
+        ordering = ["name"]
 
     def __str__(self):
         return self.name
