@@ -114,26 +114,28 @@ WSGI_APPLICATION = "grocery_api.wsgi.application"
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
-DATABASE_URL = os.environ.get("DATABASE_URL", "sqlite:///db.sqlite3")
+# Try to import dj_database_url, but make it optional
+try:
+    import dj_database_url
 
-if DATABASE_URL.startswith("sqlite"):
+    # Get database URL from environment variable or use default PostgreSQL config
+    DATABASE_URL = os.environ.get(
+        "DATABASE_URL", "postgres://postgres:postgres@localhost:5432/grocery_api"
+    )
+
     DATABASES = {
-        "default": {
-            "ENGINE": "django.db.backends.sqlite3",
-            "NAME": BASE_DIR / "db.sqlite3",
-        }
+        "default": dj_database_url.parse(DATABASE_URL),
     }
-else:
-    # For future use with PostgreSQL, MySQL, etc.
-    # You'll need to install dj-database-url for this
-    # import dj_database_url
-    # DATABASES = {
-    #     'default': dj_database_url.parse(DATABASE_URL),
-    # }
+except ImportError:
+    # Fall back to PostgreSQL using direct settings
     DATABASES = {
         "default": {
-            "ENGINE": "django.db.backends.sqlite3",
-            "NAME": BASE_DIR / "db.sqlite3",
+            "ENGINE": "django.db.backends.postgresql",
+            "NAME": os.environ.get("POSTGRES_DB", "grocery_api"),
+            "USER": os.environ.get("POSTGRES_USER", "postgres"),
+            "PASSWORD": os.environ.get("POSTGRES_PASSWORD", "postgres"),
+            "HOST": os.environ.get("POSTGRES_HOST", "localhost"),
+            "PORT": os.environ.get("POSTGRES_PORT", "5432"),
         }
     }
 
@@ -330,8 +332,8 @@ AFRICAS_TALKING_SENDER_ID = os.environ.get(
 )  # Optional, for branded messages
 
 # Celery Configuration
-CELERY_BROKER_URL = "redis://localhost:6379/0"
-CELERY_RESULT_BACKEND = "redis://localhost:6379/0"
+CELERY_BROKER_URL = os.environ.get("CELERY_BROKER_URL", "redis://localhost:6379/0")
+CELERY_RESULT_BACKEND = os.environ.get("CELERY_RESULT_BACKEND", "redis://localhost:6379/0")
 CELERY_ACCEPT_CONTENT = ["json"]
 CELERY_TASK_SERIALIZER = "json"
 CELERY_RESULT_SERIALIZER = "json"
