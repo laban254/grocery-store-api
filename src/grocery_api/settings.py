@@ -284,13 +284,28 @@ API for a grocery store management system
     },
     # Apply security globally to all operations
     'SECURITY': [{'Bearer': []}],
-    # Customize operation tags
-    'TAGS': [
-        {'name': 'Products', 'description': 'Product management endpoints'},
-        {'name': 'Orders', 'description': 'Order management endpoints'},
-    ],
     # Include pattern for callback URLs to ensure they are in the schema
     'SCHEMA_PATH_PREFIX_INSERT': '',
     # Make sure callback endpoints are visible even without explicit schema decoration
     'APPEND_COMPONENTS': {"schemas": {}},
 }
+
+# Africa's Talking SMS API Configuration
+# In sandbox mode:
+# 1. Username must be 'sandbox'
+# 2. Use sandbox API key from Africa's Talking dashboard
+# 3. Phone numbers must be registered in sandbox environment
+AFRICAS_TALKING_ENVIRONMENT = os.environ.get('AFRICAS_TALKING_ENVIRONMENT', 'sandbox')
+AFRICAS_TALKING_API_KEY = os.environ.get('AFRICAS_TALKING_API_KEY')
+
+# These settings are only used in production mode
+AFRICAS_TALKING_USERNAME = os.environ.get('AFRICAS_TALKING_USERNAME', 'sandbox')
+AFRICAS_TALKING_SENDER_ID = os.environ.get('AFRICAS_TALKING_SENDER_ID')  # Optional, for branded messages
+
+# Celery Configuration
+CELERY_BROKER_URL = 'redis://localhost:6379/0'
+CELERY_RESULT_BACKEND = 'redis://localhost:6379/0'
+CELERY_ACCEPT_CONTENT = ['json']
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_RESULT_SERIALIZER = 'json'
+CELERY_TIMEZONE = TIME_ZONE

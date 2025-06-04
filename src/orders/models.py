@@ -1,5 +1,6 @@
 from django.db import models
 from django.conf import settings
+from django.dispatch import receiver
 from products.models import Product
 
 
@@ -32,6 +33,17 @@ class Order(models.Model):
 
     def __str__(self):
         return f"Order {self.order_number}"
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Store the original status to detect changes
+        self._original_status = self.status if self.id else None
+    
+    def save(self, *args, **kwargs):
+        if self.id is None:
+            # This is a new order
+            self._original_status = self.status
+        super().save(*args, **kwargs)
 
 
 class OrderItem(models.Model):

@@ -9,7 +9,11 @@ class User(AbstractUser):
     """
     oidc_id = models.CharField(max_length=255, blank=True, null=True, unique=True)
     oidc_provider = models.CharField(max_length=100, blank=True, null=True)
-    phone = models.CharField(max_length=15, blank=True)
+    phone = models.CharField(
+        max_length=15, 
+        blank=True,
+        help_text="Phone number in international format (e.g., +254722000000)"
+    )
     address = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -32,3 +36,21 @@ class User(AbstractUser):
     @property
     def full_name(self):
         return self.get_full_name()
+    
+    def clean(self):
+        """Validate and format phone number"""
+        if self.phone:
+            # Remove any spaces or special characters
+            cleaned_phone = ''.join(filter(str.isdigit, self.phone))
+            
+            # If number starts with 0, replace with country code
+            if cleaned_phone.startswith('0'):
+                cleaned_phone = '254' + cleaned_phone[1:]
+            
+            # If number doesn't start with +, add it
+            if not self.phone.startswith('+'):
+                cleaned_phone = '+' + cleaned_phone
+                
+            self.phone = cleaned_phone
+        
+        super().clean()

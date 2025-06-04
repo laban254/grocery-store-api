@@ -1,6 +1,7 @@
 from rest_framework import serializers
 from .models import Order, OrderItem
 from products.models import Product
+from .tasks import send_order_confirmation_sms
 import uuid
 
 
@@ -37,6 +38,16 @@ class OrderCreateSerializer(serializers.Serializer):
     """
     shipping_address = serializers.CharField()
     items = OrderItemCreateSerializer(many=True)
+
+    def validate(self, attrs):
+        # Check if user has a phone number
+        request = self.context.get('request')
+        if not request.user.phone:
+            raise serializers.ValidationError(
+                "Please update your profile with a phone number before placing an order. "
+                "We need your phone number to send order updates via SMS."
+            )
+        return attrs
     
     def validate_items(self, value):
         if not value:
@@ -87,5 +98,8 @@ class OrderCreateSerializer(serializers.Serializer):
             # Update product stock
             product.stock -= quantity
             product.save()
+        
+        # Send order confirmation SMS asynchronously
+        send_order_confirmation_sms.delay(order.id)
         
         return order

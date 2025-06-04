@@ -1,0 +1,71 @@
+from celery import shared_task
+from .services import send_sms
+from .models import Order
+
+
+@shared_task
+def send_order_confirmation_sms(order_id):
+    """
+    Celery task to send SMS notification for a new order.
+    
+    Args:
+        order_id (int): The ID of the newly created order
+    """
+    try:
+        order = Order.objects.get(id=order_id)
+        
+        message = (
+            f"Dear {order.user.get_full_name()}, "
+            f"Your order #{order.order_number} for KES {order.total_amount} "
+            f"has been received successfully. We'll notify you when it's on the way. "
+            f"Thank you for shopping with us!"
+        )
+        
+        phone_number = order.user.phone
+        if phone_number:
+            return send_sms(phone_number, message)
+        
+        return {"status": "error", "message": "No phone number available for the customer"}
+    
+    except Order.DoesNotExist:
+        return {"status": "error", "message": f"Order with ID {order_id} does not exist"}
+    
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+
+
+@shared_task
+def send_order_status_update_sms(order_id, status):
+    """
+    Celery task to send SMS notification when order status changes.
+    
+    Args:
+        order_id (int): The ID of the order
+        status (str): The new status of the order
+    """
+    try:
+        order = Order.objects.get(id=order_id)
+        
+        status_messages = {
+            'processing': f"Dear {order.user.get_full_name()}, your order #{order.order_number} is now being processed.",
+            'shipped': f"Dear {order.user.get_full_name()}, your order #{order.order_number} has been shipped and is on the way!",
+            'delivered': f"Dear {order.user.get_full_name()}, your order #{order.order_number} has been delivered. Enjoy!",
+            'cancelled': f"Dear {order.user.get_full_name()}, your order #{order.order_number} has been cancelled. Please contact customer service for assistance."
+        }
+        
+        message = status_messages.get(
+            status, 
+            f"Dear {order.user.get_full_name()}, the status of your order #{order.order_number} has been updated to {status}."
+        )
+        
+        phone_number = order.user.phone
+        if phone_number:
+            return send_sms(phone_number, message)
+        
+        return {"status": "error", "message": "No phone number available for the customer"}
+    
+    except Order.DoesNotExist:
+        return {"status": "error", "message": f"Order with ID {order_id} does not exist"}
+    
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
