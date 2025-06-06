@@ -1,0 +1,115 @@
+name: CI
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths-ignore:
+      - "README.md"
+      - ".github/workflows/**"
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      AFRICAS_TALKING_USERNAME: ${{ secrets.AFRICAS_TALKING_USERNAME }}
+      AFRICAS_TALKING_API_KEY: ${{ secrets.AFRICAS_TALKING_API_KEY }}
+      GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
+      GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
+      SECRET_KEY: ${{ secrets.SECRET_KEY }}
+      DEBUG: 'False'
+
+    services:
+      db:
+        image: postgres:latest
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      redis:
+        image: redis:6
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.8'
+
+    - name: Install dependencies
+      run: |
+        pip install -r requirements.txt
+        pip install pytest pytest-cov black flake8 bandit safety
+
+    - name: Run Black
+      run: |
+        black . --check
+
+    - name: Run Flake8
+      run: |
+        flake8 . --max-line-length=100 --exclude=migrations,venv,.venv
+
+    - name: Check Dependencies for Security Issues
+      run: |
+        safety check
+
+    - name: Run Bandit Security Checks
+      run: |
+        bandit -r src/ -x tests/,*/tests/
+
+    - name: Create migrations
+      run: |
+        cd src
+        python manage.py makemigrations
+      env:
+        DATABASE_NAME: postgres
+        DATABASE_USER: postgres
+        DATABASE_PASSWORD: postgres
+        DATABASE_HOST: localhost
+        DATABASE_PORT: 5432
+        ALLOWED_HOSTS: 'localhost,127.0.0.1'
+
+    - name: Run migrations
+      run: |
+        cd src
+        python manage.py migrate
+      env:
+        DATABASE_NAME: postgres
+        DATABASE_USER: postgres
+        DATABASE_PASSWORD: postgres
+        DATABASE_HOST: localhost
+        DATABASE_PORT: 5432
+        ALLOWED_HOSTS: 'localhost,127.0.0.1'
+
+    - name: Run tests with coverage
+      run: |
+        cd src
+        pytest --cov --cov-report=xml --disable-warnings
+      env:
+        DATABASE_NAME: postgres
+        DATABASE_USER: postgres
+        DATABASE_PASSWORD: postgres
+        DATABASE_HOST: localhost
+        DATABASE_PORT: 5432
+        ALLOWED_HOSTS: 'localhost,127.0.0.1'
+
+    - name: Upload coverage results to Codecov
+      uses: codecov/codecov-action@v4
+      with:
+        token: ${{ secrets.CODECOV_TOKEN }}
