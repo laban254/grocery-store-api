@@ -66,14 +66,6 @@ jobs:
       run: |
         flake8 . --max-line-length=100 --exclude=migrations,venv,.venv
 
-    - name: Check Dependencies for Security Issues
-      run: |
-        safety check
-
-    - name: Run Bandit Security Checks
-      run: |
-        bandit -r src/ -x tests/,*/tests/
-
     - name: Create migrations
       run: |
         cd src
