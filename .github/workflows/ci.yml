@@ -16,7 +16,6 @@ jobs:
       AFRICAS_TALKING_API_KEY: ${{ secrets.AFRICAS_TALKING_API_KEY }}
       GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
       GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
-      SECRET_KEY: ${{ secrets.SECRET_KEY }}
       DEBUG: 'False'
 
     services:
@@ -69,37 +68,30 @@ jobs:
     - name: Create migrations
       run: |
         cd src
-        DJANGO_SETTINGS_MODULE=grocery_api.settings python manage.py makemigrations
+        python manage.py makemigrations
       env:
         DATABASE_NAME: postgres
         DATABASE_USER: postgres
         DATABASE_PASSWORD: postgres
         DATABASE_HOST: localhost
         DATABASE_PORT: 5432
-        ALLOWED_HOSTS: 'localhost,127.0.0.1'
-        SECRET_KEY: ${{ secrets.SECRET_KEY }}
-        DEBUG: 'False'
-        DJANGO_SETTINGS_MODULE: 'grocery_api.settings'
 
     - name: Run migrations
       run: |
         cd src
-        DJANGO_SETTINGS_MODULE=grocery_api.settings python manage.py migrate
+        python manage.py migrate
       env:
         DATABASE_NAME: postgres
         DATABASE_USER: postgres
         DATABASE_PASSWORD: postgres
         DATABASE_HOST: localhost
         DATABASE_PORT: 5432
-        ALLOWED_HOSTS: 'localhost,127.0.0.1'
-        SECRET_KEY: ${{ secrets.SECRET_KEY }}
         DEBUG: 'False'
-        DJANGO_SETTINGS_MODULE: 'grocery_api.settings'
 
     - name: Run tests with coverage
       run: |
         cd src
-        DJANGO_SETTINGS_MODULE=grocery_api.settings pytest --cov --cov-report=xml --disable-warnings
+        pytest --cov --cov-report=xml --disable-warnings
       env:
         DATABASE_NAME: postgres
         DATABASE_USER: postgres
@@ -107,7 +99,6 @@ jobs:
         DATABASE_HOST: localhost
         DATABASE_PORT: 5432
         ALLOWED_HOSTS: 'localhost,127.0.0.1'
-        SECRET_KEY: ${{ secrets.SECRET_KEY }}
         DEBUG: 'False'
         DJANGO_SETTINGS_MODULE: 'grocery_api.settings'
         PYTHONPATH: ${{ github.workspace }}/src

@@ -1,0 +1,61 @@
+name: Deploy to Staging
+
+on:
+  push:
+    branches:
+      - staging
+
+env:
+  DEPLOYMENT_NAME: grocery-api
+  IMAGE: grocery-api
+  TAG: ${{ github.sha }}
+  VM_HOST: ${{ secrets.VM_HOST }}
+  VM_USER: ${{ secrets.VM_USER }}
+  VM_SSH_KEY: ${{ secrets.VM_SSH_KEY }}
+  K8S_REPO: ${{ secrets.K8S_REPO }}
+
+jobs:
+  build-and-deploy:
+    name: Build and Deploy
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout application code
+      uses: actions/checkout@v2
+
+    - name: Checkout K8s configurations
+      uses: actions/checkout@v2
+      with:
+        repository: ${{ secrets.K8S_REPO }}
+        path: k8s-config
+        token: ${{ secrets.GH_PAT }}
+
+    - name: Set up SSH
+      run: |
+        mkdir -p ~/.ssh
+        echo "${{ secrets.VM_SSH_KEY }}" > ~/.ssh/id_rsa
+        chmod 600 ~/.ssh/id_rsa
+        echo "${{ secrets.VM_HOST_KEY }}" >> ~/.ssh/known_hosts
+
+    - name: Build and transfer Docker image
+      run: |
+        docker build -t $IMAGE:$TAG \
+          --build-arg SSH_PUBLIC_KEY="${{ secrets.SSH_PUBLIC_KEY }}" \
+          .
+        docker save $IMAGE:$TAG | ssh $VM_USER@$VM_HOST 'docker load'
+
+    - name: Update kustomization and deploy
+      run: |
+        # Update image tag in kustomization
+        cd k8s-config/grocery-api
+        sed -i "s|newTag:.*|newTag: $TAG|" kustomization.yaml
+
+        # Commit and push changes
+        git config --global user.name 'GitHub Actions'
+        git config --global user.email 'actions@github.com'
+        git add .
+        git commit -m "Update image to ${TAG}"
+        git push
+
+        # Deploy to VM's Kubernetes
+        ssh $VM_USER@$VM_HOST "cd ~/k8s && git pull && kubectl apply -k grocery-api/ && kubectl rollout status deployment/$DEPLOYMENT_NAME"
