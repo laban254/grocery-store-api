@@ -1,7 +1,7 @@
 # Grocery API
 
-[![CI](https://github.com/yourusername/grocery_api/actions/workflows/ci.yml/badge.svg)](https://github.com/yourusername/grocery_api/actions/workflows/ci.yml)
-[![codecov](https://codecov.io/gh/yourusername/grocery_api/branch/main/graph/badge.svg)](https://codecov.io/gh/yourusername/grocery_api)
+[![CI](https://github.com/<YOUR_GITHUB_USERNAME>/grocery_api/actions/workflows/ci.yml/badge.svg)](https://github.com/<YOUR_GITHUB_USERNAME>/grocery_api/actions/workflows/ci.yml)
+[![codecov](https://codecov.io/gh/<YOUR_GITHUB_USERNAME>/grocery_api/branch/main/graph/badge.svg)](https://codecov.io/gh/<YOUR_GITHUB_USERNAME>/grocery_api)
 
 A modern REST API for grocery store management built with Django and Django REST Framework.
 
