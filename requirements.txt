@@ -35,7 +35,7 @@ prompt_toolkit==3.0.51
 psycopg2-binary==2.9.9
 pyasn1==0.6.1
 pycparser==2.22
-PyJWT==2.10.1
+PyJWT==2.9.0
 pytest==8.0.0
 pytest-django==4.11.1
 pytest-cov==4.1.0
