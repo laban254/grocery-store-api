@@ -48,7 +48,7 @@ redis==6.1.1
 referencing==0.15.0
 requests==2.31.0
 requests-oauthlib==2.0.0
-rpds-py==0.25.1
+rpds-py==0.9.0
 rsa==4.9.1
 schema==0.7.7
 six==1.17.0
