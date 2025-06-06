@@ -36,13 +36,12 @@ class TestOrderModel:
         order = Order.objects.create(
             user=user,
             order_number="ORD-TEST123",
-            status="processing",  # Valid choice
+            status="processing",
             total_amount=Decimal("19.99"),
             shipping_address="Test Address",
         )
         assert order.status == "processing"
 
-        # Other valid statuses
         valid_statuses = ["pending", "shipped", "delivered", "cancelled"]
         for status in valid_statuses:
             order.status = status
@@ -52,7 +51,6 @@ class TestOrderModel:
     def test_order_meta_ordering(self, db, orders):
         """Test that orders are ordered by created_at in descending order."""
         db_orders = list(Order.objects.all())
-        # The latest created order should be first
         assert db_orders[0].order_number == orders[1].order_number
         assert db_orders[1].order_number == orders[0].order_number
 
@@ -83,7 +81,6 @@ class TestOrderItemModel:
 
     def test_order_with_multiple_items(self, db, orders, products):
         """Test an order with multiple items."""
-        # Get the second order which has multiple items
         order = orders[1]
         items = order.items.all()
 

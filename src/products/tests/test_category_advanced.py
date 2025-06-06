@@ -60,7 +60,6 @@ def products_by_category(category_tree):
     """Create products for different categories."""
     products = {}
 
-    # Create products for citrus
     products["orange"] = Product.objects.create(
         name="Orange",
         slug="orange",
@@ -79,7 +78,6 @@ def products_by_category(category_tree):
         stock=60,
     )
 
-    # Create products for berries
     products["strawberry"] = Product.objects.create(
         name="Strawberry",
         slug="strawberry",
@@ -89,7 +87,6 @@ def products_by_category(category_tree):
         stock=40,
     )
 
-    # Create products for vegetables
     products["carrot"] = Product.objects.create(
         name="Carrot",
         slug="carrot",
@@ -99,7 +96,6 @@ def products_by_category(category_tree):
         stock=100,
     )
 
-    # Create products for laptops
     products["macbook"] = Product.objects.create(
         name="MacBook Pro",
         slug="macbook-pro",
@@ -223,7 +219,6 @@ class TestCategoryHierarchyAPI:
         assert response.data["name"] == "Groceries"
 
         # Note: The current CategorySerializer doesn't include children
-        # If it did, we would test that here
 
     def test_deep_hierarchy_navigation(self, db, api_client, category_tree):
         """Test navigating through the category hierarchy."""

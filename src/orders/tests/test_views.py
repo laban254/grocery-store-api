@@ -18,7 +18,6 @@ class TestOrderViewSet:
         assert response.status_code == status.HTTP_200_OK
         assert len(response.data) == 2
 
-        # Verify order details
         order_numbers = [order["order_number"] for order in response.data]
         assert "ORD-123ABC" in order_numbers
         assert "ORD-456DEF" in order_numbers
@@ -55,12 +54,10 @@ class TestOrderViewSet:
         )
         api_client.force_authenticate(user=other_user)
 
-        # Try to access the first user's order
         order = orders[0]
         url = reverse("order-detail", args=[order.id])
         response = api_client.get(url)
 
-        # Should return 404 (not 403) as per the queryset filter in the view
         assert response.status_code == status.HTTP_404_NOT_FOUND
 
     def test_retrieve_order_unauthenticated(self, db, api_client, orders):
@@ -73,10 +70,8 @@ class TestOrderViewSet:
 
     def test_create_order_authenticated(self, db, authenticated_client, products):
         """Test creating a new order by authenticated user."""
-        # Get initial stock
         initial_stock = products[0].stock
 
-        # Prepare order data
         data = {
             "shipping_address": "789 Test Road, Nairobi, Kenya",
             "items": [{"product_id": products[0].id, "quantity": 5}],
@@ -92,17 +87,13 @@ class TestOrderViewSet:
         assert "total_amount" in response.data
         assert response.data["shipping_address"] == "789 Test Road, Nairobi, Kenya"
 
-        # Verify order was created in database
         assert Order.objects.count() == 1
         order = Order.objects.first()
-
-        # Verify order items
         assert order.items.count() == 1
         item = order.items.first()
         assert item.product.id == products[0].id
         assert item.quantity == 5
 
-        # Verify stock was updated
         products[0].refresh_from_db()
         assert products[0].stock == initial_stock - 5
 
@@ -121,7 +112,6 @@ class TestOrderViewSet:
 
     def test_create_order_with_invalid_data(self, db, authenticated_client, products):
         """Test creating an order with invalid data."""
-        # Missing required field: shipping_address
         data = {"items": [{"product_id": products[0].id, "quantity": 5}]}
 
         url = reverse("order-list")
@@ -135,11 +125,9 @@ class TestOrderViewSet:
 
     def test_create_order_with_multiple_items(self, db, authenticated_client, products):
         """Test creating an order with multiple items."""
-        # Get initial stock
         initial_stock_0 = products[0].stock
         initial_stock_1 = products[1].stock
 
-        # Prepare order data
         data = {
             "shipping_address": "789 Test Road, Nairobi, Kenya",
             "items": [
@@ -155,11 +143,9 @@ class TestOrderViewSet:
 
         assert response.status_code == status.HTTP_201_CREATED
 
-        # Verify order was created with correct items
         order = Order.objects.first()
         assert order.items.count() == 2
 
-        # Verify stock was updated for both products
         products[0].refresh_from_db()
         products[1].refresh_from_db()
         assert products[0].stock == initial_stock_0 - 3
@@ -167,7 +153,6 @@ class TestOrderViewSet:
 
     def test_create_order_with_insufficient_stock(self, db, authenticated_client, products):
         """Test creating an order with insufficient stock."""
-        # Set stock lower than requested quantity
         products[0].stock = 2
         products[0].save()
 
@@ -185,9 +170,7 @@ class TestOrderViewSet:
         assert "items" in response.data
         assert "Not enough stock" in str(response.data["items"][0])
 
-        # Verify no order was created
         assert Order.objects.count() == 0
 
-        # Verify stock was not changed
         products[0].refresh_from_db()
         assert products[0].stock == 2

@@ -99,7 +99,6 @@ def order(user, product):
         shipping_address="123 Test Street, Nairobi, Kenya",
     )
 
-    # Create order item
     OrderItem.objects.create(order=order, product=product, quantity=10, price=product.price)
 
     return order
@@ -110,7 +109,6 @@ def orders(user, products):
     """Create multiple orders for testing."""
     orders = []
 
-    # Create first order with one item
     order1 = Order.objects.create(
         user=user,
         order_number="ORD-123ABC",
@@ -125,7 +123,6 @@ def orders(user, products):
 
     orders.append(order1)
 
-    # Create second order with multiple items
     order2 = Order.objects.create(
         user=user,
         order_number="ORD-456DEF",

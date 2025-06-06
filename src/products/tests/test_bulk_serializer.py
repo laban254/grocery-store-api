@@ -50,20 +50,16 @@ class TestBulkProductCreateSerializer:
 
     def test_bulk_product_creation(self, db, bulk_product_data):
         """Test that multiple products can be created using the serializer."""
-        # Verify that no products exist initially
         assert Product.objects.count() == 0
 
-        # Create products using the serializer
         serializer = BulkProductCreateSerializer(data=bulk_product_data)
         assert serializer.is_valid(), serializer.errors
 
         result = serializer.save()
 
-        # Verify that products were created
         assert Product.objects.count() == 3
         assert len(result["products"]) == 3
 
-        # Check that each product was created with correct data
         for i, product in enumerate(result["products"]):
             expected_data = bulk_product_data["products"][i]
             assert product.name == expected_data["name"]
@@ -75,11 +71,10 @@ class TestBulkProductCreateSerializer:
 
     def test_bulk_product_validation(self, db, category):
         """Test validation in the bulk product serializer."""
-        # Data with missing required fields
         invalid_data = {
             "products": [
                 {
-                    "name": "Apple",  # Missing slug
+                    "name": "Apple",
                     "category": category.id,
                     # Missing price
                     "stock": 100,
@@ -90,7 +85,6 @@ class TestBulkProductCreateSerializer:
         serializer = BulkProductCreateSerializer(data=invalid_data)
         assert not serializer.is_valid()
 
-        # Check that the appropriate validation errors are raised
         errors = serializer.errors
         assert "products" in errors
         products_errors = errors["products"][0]
@@ -99,13 +93,12 @@ class TestBulkProductCreateSerializer:
 
     def test_invalid_category(self, db):
         """Test validation with invalid category ID."""
-        # Data with non-existent category ID
         invalid_data = {
             "products": [
                 {
                     "name": "Apple",
                     "slug": "apple",
-                    "category": 9999,  # Non-existent category ID
+                    "category": 9999,
                     "description": "Fresh red apples",
                     "price": Decimal("2.99"),
                     "stock": 100,
@@ -116,7 +109,6 @@ class TestBulkProductCreateSerializer:
         serializer = BulkProductCreateSerializer(data=invalid_data)
         assert not serializer.is_valid()
 
-        # Check that category validation error is raised
         errors = serializer.errors
         assert "products" in errors
         assert "category" in errors["products"][0]
