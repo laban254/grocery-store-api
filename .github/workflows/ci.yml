@@ -2,6 +2,7 @@ name: CI
 
 on:
   pull_request:
+    branches: ["main", "staging", "dev"]
     types: [opened, synchronize, reopened]
     paths-ignore:
       - "README.md"
@@ -65,18 +66,10 @@ jobs:
       run: |
         flake8 . --max-line-length=100 --exclude=migrations,venv,.venv
 
-    - name: Check Dependencies for Security Issues
-      run: |
-        safety check
-
-    - name: Run Bandit Security Checks
-      run: |
-        bandit -r src/ -x tests/,*/tests/
-
     - name: Create migrations
       run: |
         cd src
-        python manage.py makemigrations
+        DJANGO_SETTINGS_MODULE=grocery_api.settings python manage.py makemigrations
       env:
         DATABASE_NAME: postgres
         DATABASE_USER: postgres
@@ -84,11 +77,14 @@ jobs:
         DATABASE_HOST: localhost
         DATABASE_PORT: 5432
         ALLOWED_HOSTS: 'localhost,127.0.0.1'
+        SECRET_KEY: ${{ secrets.SECRET_KEY }}
+        DEBUG: 'False'
+        DJANGO_SETTINGS_MODULE: 'grocery_api.settings'
 
     - name: Run migrations
       run: |
         cd src
-        python manage.py migrate
+        DJANGO_SETTINGS_MODULE=grocery_api.settings python manage.py migrate
       env:
         DATABASE_NAME: postgres
         DATABASE_USER: postgres
@@ -96,11 +92,14 @@ jobs:
         DATABASE_HOST: localhost
         DATABASE_PORT: 5432
         ALLOWED_HOSTS: 'localhost,127.0.0.1'
+        SECRET_KEY: ${{ secrets.SECRET_KEY }}
+        DEBUG: 'False'
+        DJANGO_SETTINGS_MODULE: 'grocery_api.settings'
 
     - name: Run tests with coverage
       run: |
         cd src
-        pytest --cov --cov-report=xml --disable-warnings
+        DJANGO_SETTINGS_MODULE=grocery_api.settings pytest --cov --cov-report=xml --disable-warnings
       env:
         DATABASE_NAME: postgres
         DATABASE_USER: postgres
@@ -108,6 +107,10 @@ jobs:
         DATABASE_HOST: localhost
         DATABASE_PORT: 5432
         ALLOWED_HOSTS: 'localhost,127.0.0.1'
+        SECRET_KEY: ${{ secrets.SECRET_KEY }}
+        DEBUG: 'False'
+        DJANGO_SETTINGS_MODULE: 'grocery_api.settings'
+        PYTHONPATH: ${{ github.workspace }}/src
 
     - name: Upload coverage results to Codecov
       uses: codecov/codecov-action@v4

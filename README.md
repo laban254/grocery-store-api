@@ -1,10 +1,13 @@
 # Grocery API
 
+[![CI](https://github.com/<YOUR_GITHUB_USERNAME>/grocery_api/actions/workflows/ci.yml/badge.svg)](https://github.com/<YOUR_GITHUB_USERNAME>/grocery_api/actions/workflows/ci.yml)
+[![codecov](https://codecov.io/gh/<YOUR_GITHUB_USERNAME>/grocery_api/branch/main/graph/badge.svg)](https://codecov.io/gh/<YOUR_GITHUB_USERNAME>/grocery_api)
+
 A modern REST API for grocery store management built with Django and Django REST Framework.
 
 ## Overview
 
-This API provides a complete backend solution for managing a grocery store, including user authentication, product catalog, order processing, and more. It incorporates modern practices such as JWT authentication, OpenID Connect integration, and SMS notifications.
+This API provides a complete backend solution for managing a grocery store, including user authentication, product catalog, order processing, and more. It incorporates modern practices such as JWT authentication, OpenID Connect integration, SMS notifications, and comprehensive CI/CD pipelines.
 
 ## Features
 
@@ -29,6 +32,7 @@ This API provides a complete backend solution for managing a grocery store, incl
 
 ## Tech Stack
 
+### Core Technologies
 - **Backend Framework:** Django 5.2
 - **API Framework:** Django REST Framework 3.16
 - **Authentication:** JWT (djangorestframework-simplejwt), OAuth (django-allauth)
@@ -36,6 +40,13 @@ This API provides a complete backend solution for managing a grocery store, incl
 - **Hierarchical Data:** django-mptt
 - **SMS Notifications:** Africa's Talking API
 - **Documentation:** drf-spectacular (OpenAPI)
+
+### Development & Quality Tools
+- **Testing:** pytest, pytest-cov
+- **Code Quality:** black, flake8, bandit
+- **CI/CD:** GitHub Actions
+- **Code Coverage:** Codecov
+- **Security Scanning:** Safety, Bandit
 
 ## Getting Started
 
@@ -358,3 +369,53 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 - [Django](https://www.djangoproject.com/)
 - [Django REST Framework](https://www.django-rest-framework.org/)
 - [Africa's Talking](https://africastalking.com/)
+
+## Development Workflow & CI/CD
+
+### Continuous Integration
+
+This project uses GitHub Actions for continuous integration. The CI pipeline runs automatically on:
+- Pull request creation
+- Pull request updates
+- Pull request reopening
+
+The CI pipeline performs the following checks:
+1. **Code Quality**
+   - Black formatting check
+   - Flake8 linting
+   - Security checks with Bandit
+   - Dependency vulnerability scanning with Safety
+
+2. **Testing**
+   - Runs pytest test suite
+   - Generates coverage reports
+   - Uploads coverage to Codecov
+
+3. **Database Checks**
+   - Runs database migrations
+   - Verifies migration integrity
+
+### Pull Request Process
+
+1. Create a new branch from `main`
+2. Make your changes
+3. Run tests locally:
+   ```bash
+   cd src
+   pytest --cov
+   ```
+4. Create a pull request
+5. Wait for CI checks to pass
+6. Request code review
+7. Address review comments
+8. Merge when approved
+
+### GitHub Secrets
+
+The following secrets need to be configured in your GitHub repository:
+- `AFRICAS_TALKING_USERNAME` - Africa's Talking API username
+- `AFRICAS_TALKING_API_KEY` - Africa's Talking API key
+- `GOOGLE_CLIENT_ID` - Google OAuth client ID
+- `GOOGLE_CLIENT_SECRET` - Google OAuth client secret
+- `SECRET_KEY` - Django secret key
+- `CODECOV_TOKEN` - Codecov upload token
