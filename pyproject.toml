@@ -12,3 +12,13 @@ exclude = '''
   | dist
 )/
 '''
+
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "grocery_api.settings"
+python_files = "test_*.py"
+testpaths = ["src"]
+pythonpath = ["src"]
+filterwarnings = [
+    "ignore::DeprecationWarning",
+    "ignore::PendingDeprecationWarning",
+]

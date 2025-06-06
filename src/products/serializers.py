@@ -27,12 +27,40 @@ class ProductSerializer(serializers.ModelSerializer):
         read_only_fields = fields
 
 
+class ProductCreateSerializer(serializers.ModelSerializer):
+    """
+    Serializer for creating a single product.
+    """
+
+    class Meta:
+        model = Product
+        fields = ["id", "name", "slug", "category", "description", "price", "stock"]
+        read_only_fields = ["id"]
+
+
 class BulkProductCreateSerializer(serializers.Serializer):
     """
     Serializer for creating multiple products at once.
     """
 
-    products = ProductSerializer(many=True)
+    products = serializers.ListField(child=serializers.DictField())
+
+    def validate_products(self, products):
+        """Validate each product individually using ProductCreateSerializer."""
+        validated_products = []
+        errors = []
+
+        for i, product_data in enumerate(products):
+            serializer = ProductCreateSerializer(data=product_data)
+            if serializer.is_valid():
+                validated_products.append(serializer.validated_data)
+            else:
+                errors.append(serializer.errors)
+
+        if errors:
+            raise serializers.ValidationError(errors)
+
+        return validated_products
 
     def create(self, validated_data):
         products_data = validated_data.get("products")
