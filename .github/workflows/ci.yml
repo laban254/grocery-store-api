@@ -91,7 +91,6 @@ jobs:
         DATABASE_HOST: localhost
         DATABASE_PORT: 5432
         ALLOWED_HOSTS: 'localhost,127.0.0.1'
-        SECRET_KEY: ${{ secrets.SECRET_KEY }}
         DEBUG: 'False'
         DJANGO_SETTINGS_MODULE: 'grocery_api.settings'
 
@@ -106,7 +105,6 @@ jobs:
         DATABASE_HOST: localhost
         DATABASE_PORT: 5432
         ALLOWED_HOSTS: 'localhost,127.0.0.1'
-        SECRET_KEY: ${{ secrets.SECRET_KEY }}
         DEBUG: 'False'
         DJANGO_SETTINGS_MODULE: 'grocery_api.settings'
         PYTHONPATH: ${{ github.workspace }}/src
