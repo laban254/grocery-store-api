@@ -77,6 +77,8 @@ jobs:
         DATABASE_HOST: localhost
         DATABASE_PORT: 5432
         ALLOWED_HOSTS: 'localhost,127.0.0.1'
+        SECRET_KEY: ${{ secrets.SECRET_KEY }}
+        DEBUG: 'False'
 
     - name: Run migrations
       run: |
@@ -89,6 +91,8 @@ jobs:
         DATABASE_HOST: localhost
         DATABASE_PORT: 5432
         ALLOWED_HOSTS: 'localhost,127.0.0.1'
+        SECRET_KEY: ${{ secrets.SECRET_KEY }}
+        DEBUG: 'False'
 
     - name: Run tests with coverage
       run: |
@@ -101,6 +105,8 @@ jobs:
         DATABASE_HOST: localhost
         DATABASE_PORT: 5432
         ALLOWED_HOSTS: 'localhost,127.0.0.1'
+        SECRET_KEY: ${{ secrets.SECRET_KEY }}
+        DEBUG: 'False'
 
     - name: Upload coverage results to Codecov
       uses: codecov/codecov-action@v4
