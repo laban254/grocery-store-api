@@ -1,0 +1,77 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:15
+    volumes:
+      - postgres_data:/var/lib/postgresql/data/
+    env_file:
+      - ./.env
+    environment:
+      - POSTGRES_DB=${POSTGRES_DB:-grocery_api}
+      - POSTGRES_USER=${POSTGRES_USER:-grocery_user}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-your_password}
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-grocery_user}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6380:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  web:
+    build: .
+    command: python src/manage.py runserver 0.0.0.0:8000
+    volumes:
+      - .:/app
+      - static_volume:/app/src/staticfiles
+      - media_volume:/app/src/mediafiles
+    ports:
+      - "8000:8000"
+    env_file:
+      - ./.env
+    environment:
+      - DATABASE_URL=postgres://${POSTGRES_USER:-grocery_user}:${POSTGRES_PASSWORD:-your_password}@db:5432/${POSTGRES_DB:-grocery_api}
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  celery:
+    build: .
+    command: celery -A grocery_api worker -l INFO
+    volumes:
+      - .:/app
+      - static_volume:/app/src/staticfiles
+      - media_volume:/app/src/mediafiles
+    env_file:
+      - ./.env
+    environment:
+      - DATABASE_URL=postgres://${POSTGRES_USER:-grocery_user}:${POSTGRES_PASSWORD:-your_password}@db:5432/${POSTGRES_DB:-grocery_api}
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+    depends_on:
+      - db
+      - redis
+      - web
+
+volumes:
+  postgres_data:
+  redis_data:
+  static_volume:
+  media_volume:
