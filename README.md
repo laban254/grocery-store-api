@@ -1,204 +1,101 @@
 # Grocery API
 
-A Django-based REST API for managing a grocery store, deployed on Kubernetes with a CI/CD pipeline.
+A Django-based REST API for managing a grocery store with Kubernetes deployment support.
 
-## Key Features
+## Features
 
-- [Authentication & Authorization](accounts/) - JWT, OAuth, Phone Verification
-- [Product Management](products/) - MPTT Categories, Advanced Search
-- [Order Processing](orders/) - Async Processing, SMS Notifications
-- [API Documentation](http://localhost:8000/api/schema/swagger-ui/) - OpenAPI/Swagger
-- [Kubernetes Deployment](k8s/) - VM-based with GitHub Actions
+- Authentication & Authorization with JWT
+- Product Management and Categories
+- Asynchronous Order Processing
+- API Documentation (OpenAPI/Swagger)
+- Kubernetes Deployment Support
 
-## Technologies
+## Tech Stack
 
-### Application Stack
 - Django 5.2 + DRF 3.16
 - PostgreSQL 14 + Redis
-- Celery + Africa's Talking
-- JWT + OAuth Authentication
+- Celery for Background Tasks
+- Docker + Kubernetes
 
-### Infrastructure
-- Kubernetes (k3s)
-- Docker + GitHub Actions
-- VM Deployment
-- SSH Remote Access
-
-## Getting Started
+## Quick Start
 
 ### Prerequisites
 
-- Python 3.10+
-- PostgreSQL 14+
-- Redis (for Celery)
+- Docker and Docker Compose
+- Kubernetes cluster (for deployment)
 - Git
 
-### Quick Start (Development)
+### Local Development
 
-1. **Clone and Setup**
+1. Clone and start services:
    ```bash
    git clone <repository-url>
    cd grocery_api
-   python -m venv venv
-   source venv/bin/activate
-   pip install -r requirements.txt
-   ```
-
-2. **Configure Environment**
-   ```bash
-   cp .env.example .env  # Then edit .env with your settings
-   ```
-
-3. **Start Services**
-   ```bash
    docker-compose up -d
-   python manage.py migrate
-   python manage.py runserver
-
-
-
-5. Run migrations
-   ```bash
-   cd src
-   python manage.py migrate
    ```
 
-6. Create a superuser
+2. Run migrations and create superuser:
    ```bash
-   python manage.py createsuperuser
-   ```
-
-7. Populate the database with sample data (optional)
-   ```bash
-   python manage.py populate_db
-   ```
-
-8. Start the development server
-   ```bash
-   python manage.py runserver
-   ```
-
-9. In a separate terminal, start Celery for background tasks
-   ```bash
-   cd src
-   celery -A grocery_api worker --loglevel=info
+   docker-compose exec web python src/manage.py migrate
+   docker-compose exec web python src/manage.py createsuperuser
    ```
 
 ### API Documentation
 
-Once the server is running, you can access the API documentation at:
-
+Access the API documentation at:
 - Swagger UI: http://localhost:8000/api/schema/swagger-ui/
 - ReDoc: http://localhost:8000/api/schema/redoc/
-- Download OpenAPI schema: http://localhost:8000/api/schema/
 
+
+## Development
+
+### Testing
+```bash
+# Run tests with coverage
+docker-compose exec web pytest --cov
+```
+
+### Code Quality
+```bash
+# Install pre-commit hooks
+pre-commit install
+
+# Run manually
+pre-commit run --all-files
+```
+
+### Useful Commands
+```bash
+# View logs
+docker-compose logs -f
+
+# Run Django commands
+docker-compose exec web python src/manage.py [command]
+```
+
+For deployment instructions, see [KUBERNETES.md](KUBERNETES.md)
 
 ## Project Structure
 
 ```
 src/
-  ├── manage.py
-  ├── grocery_api/      # Project configuration
-  ├── accounts/         # User management
-  ├── products/         # Product catalog
-  ├── orders/           # Order processing
-  └── core/             # Shared functionality
+├── manage.py
+├── grocery_api/      # Project configuration
+├── accounts/         # User management
+├── products/         # Product catalog
+├── orders/          # Order processing
+└── core/            # Shared functionality
 ```
 
-## Development
+## Additional Documentation
 
-### Running Tests
+- [Docker Setup](DOCKER.md)
+- [Kubernetes Deployment](KUBERNETES.md)
+- [Application Startup](STARTUP.md)
 
-```bash
-pytest --cov
-```
+## License
 
-### Code Quality
-
-This project uses pre-commit hooks to maintain code quality:
-
-```bash
-# Install pre-commit hooks
-pre-commit install
-
-# Run pre-commit manually on all files
-pre-commit run --all-files
-```
-
-### Container Development
-
-Run the full stack in containers:
-
-```bash
-# Start all services
-docker-compose up -d
-
-# View logs
-docker-compose logs -f
-
-# Run migrations
-docker-compose exec web python manage.py migrate
-```
-
-See [docker-compose.yml](docker-compose.yml) and [Dockerfile](Dockerfile) for details.
-
-
-## Development Guidelines
-
-### Local Development
-1. Create feature branch from `main`
-2. Run tests: `pytest --cov`
-3. Submit PR with clear description
-4. Address review comments
-5. Merge after approval
-
-### CI/CD Pipeline
-- **On PR**: Tests, linting, security scans
-- **On Merge**: Automated deployment to VM
-- See [deploy-staging.yml](.github/workflows/deploy-staging.yml)
-
-### Quality Assurance
-- Pre-commit hooks for code quality
-- Automated testing with pytest
-- Coverage reporting via Codecov
-
-## Deployment
-
-### Prerequisites
-- VM with Docker and k3s installed
-- GitHub repository with necessary secrets configured
-
-### GitHub Actions Secrets Required
-```
-VM_HOST             # VM IP or hostname
-VM_USER             # SSH username
-VM_SSH_KEY          # Private SSH key
-VM_HOST_KEY         # VM's public key
-SSH_PUBLIC_KEY      # Your public SSH key
-K8S_REPO            # k8s config repository
-GH_PAT              # GitHub Personal Access Token
-```
-
-### Deployment Process
-1. Push to main branch triggers the workflow
-2. GitHub Actions:
-   - Builds Docker image
-   - Transfers to VM via SSH
-   - Applies k8s configurations
-   - Updates services
-
-See [deploy-staging.yml](.github/workflows/deploy-staging.yml) for details.
-
-### Kubernetes Components
-- `app-deployment.yaml` - API service deployment
-- `app-service.yaml` - NodePort service config
-- `postgres-deployment.yaml` - Database setup
-- `configmap.yaml` - Environment variables
-- `secrets.yaml` - Sensitive data
-
-### Monitoring
-- Access metrics at `/metrics`
-- Use `kubectl` for logs and status
+MIT License
 
 ## Troubleshooting
 

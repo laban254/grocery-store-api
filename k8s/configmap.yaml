@@ -1,7 +1,0 @@
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: grocery-api-config
-data:
-  POSTGRES_DB: grocery_api
-  DJANGO_SETTINGS_MODULE: grocery_api.settings
