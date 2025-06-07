@@ -14,11 +14,9 @@ def send_order_confirmation_sms(order_id):
     """
     try:
         order = Order.objects.get(id=order_id)
-        # Short variables
         name = order.user.first_name or "Customer"
         num = order.order_number
 
-        # Very short message
         message = f"Hi {name}, order #{num} confirmed. Thanks!"
 
         phone_number = order.user.phone
@@ -46,11 +44,9 @@ def send_order_status_update_sms(order_id, status):
     try:
         order = Order.objects.get(id=order_id)
 
-        # Short variables
         name = order.user.first_name or "Customer"
         num = order.order_number
 
-        # Very short messages
         msgs = {
             "processing": f"Hi {name}, order #{num} processing.",
             "shipped": f"Hi {name}, order #{num} shipped!",
@@ -58,10 +54,8 @@ def send_order_status_update_sms(order_id, status):
             "cancelled": f"Hi {name}, order #{num} cancelled.",
         }
 
-        # Default message
         message = msgs.get(status, f"Hi {name}, order #{num}: {status}.")
 
-        # Send the SMS
         phone_number = order.user.phone
         if phone_number:
             return send_sms(phone_number, message)

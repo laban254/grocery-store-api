@@ -7,7 +7,6 @@ class AccountsConfig(AppConfig):
 
     def ready(self):
         try:
-            # Import and register signals
             from accounts import signals  # noqa
         except ImportError:
             pass

@@ -42,7 +42,6 @@ class OrderCreateSerializer(serializers.Serializer):
     items = OrderItemCreateSerializer(many=True)
 
     def validate(self, attrs):
-        # Check if user has a phone number
         request = self.context.get("request")
         if not request.user.phone:
             raise serializers.ValidationError(
@@ -55,7 +54,6 @@ class OrderCreateSerializer(serializers.Serializer):
         if not value:
             raise serializers.ValidationError("An order must contain at least one item.")
 
-        # Check stock availability
         for item in value:
             product = item["product"]
             quantity = item["quantity"]
@@ -84,7 +82,6 @@ class OrderCreateSerializer(serializers.Serializer):
             shipping_address=validated_data["shipping_address"],
         )
 
-        # Create order items and update stock
         for item_data in items_data:
             product = item_data["product"]
             quantity = item_data["quantity"]
@@ -92,12 +89,9 @@ class OrderCreateSerializer(serializers.Serializer):
             OrderItem.objects.create(
                 order=order, product=product, quantity=quantity, price=product.price
             )
-
-            # Update product stock
             product.stock -= quantity
             product.save()
 
-        # Send order confirmation SMS asynchronously
         send_order_confirmation_sms.delay(order.id)
 
         return order
