@@ -17,8 +17,6 @@ jobs:
     env:
       IMAGE_NAME: grocery_api
       IMAGE_TAG: latest
-      SERVER_HOST: 35.192.12.145
-      SERVER_USER: github-actions
       NAMESPACE: grocery-api
 
     steps:
@@ -35,34 +33,29 @@ jobs:
         docker save ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }} > ${{ env.IMAGE_NAME }}.tar
         echo "Docker image built and saved successfully"
 
-    - name: Set up SSH connection
+    - name: Connect and deploy
       run: |
-        echo "Setting up SSH connection..."
         mkdir -p ~/.ssh
         echo "${{ secrets.GCP_SSH_KEY }}" > ~/.ssh/id_ed25519
         chmod 600 ~/.ssh/id_ed25519
-        ssh-keyscan -H ${{ env.SERVER_HOST }} >> ~/.ssh/known_hosts
-        echo "SSH setup completed"
+        ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_ed25519 github-actions@35.192.12.145 'echo "Connected from GitHub Actions!"'
 
-    - name: Upload Docker image to server
-      run: |
+        # Upload Docker image to server
         echo "Uploading Docker image to server..."
         scp -i ~/.ssh/id_ed25519 ${{ env.IMAGE_NAME }}.tar ${{ env.SERVER_USER }}@${{ env.SERVER_HOST }}:~/${{ env.IMAGE_NAME }}.tar
-        echo "Image uploaded successfully"
 
-    - name: Deploy to Kubernetes
-      run: |
+        # Deploy to Kubernetes
         echo "Deploying to Kubernetes..."
-        ssh -i ~/.ssh/id_ed25519 ${{ env.SERVER_USER }}@${{ env.SERVER_HOST }} << EOF
+        ssh -i ~/.ssh/id_ed25519 ${{ env.SERVER_USER }}@${{ env.SERVER_HOST }} << 'EOF'
         # Load the Docker image
         echo "Loading Docker image..."
-        docker load < ${IMAGE_NAME}.tar
+        docker load < grocery_api.tar
 
         # Clone or update deployment repository
         echo "Updating deployment files..."
         mkdir -p ~/grocery_api_deploy
-        if [ ! -d "~/grocery_api_deploy/.git" ]; then
-          git clone \$(git config --get remote.origin.url) ~/grocery_api_deploy
+        if [ ! -d ~/grocery_api_deploy/.git ]; then
+          git clone $(git config --get remote.origin.url) ~/grocery_api_deploy
         else
           cd ~/grocery_api_deploy
           git pull
@@ -73,44 +66,33 @@ jobs:
 
         # Create namespace if it doesn't exist
         echo "Creating/verifying namespace..."
-        kubectl create namespace ${NAMESPACE} --dry-run=client -o yaml | kubectl apply -f -
+        kubectl create namespace grocery-api --dry-run=client -o yaml | kubectl apply -f -
 
         # Apply ConfigMaps first
         echo "Applying ConfigMaps..."
-        kubectl apply -f k8s/env-configmap.yaml -n ${NAMESPACE}
-        kubectl apply -f k8s/web-cm0-configmap.yaml -n ${NAMESPACE}
-        kubectl apply -f k8s/celery-cm0-configmap.yaml -n ${NAMESPACE}
+        kubectl apply -f k8s/env-configmap.yaml -n grocery-api
+        kubectl apply -f k8s/web-cm0-configmap.yaml -n grocery-api
+        kubectl apply -f k8s/celery-cm0-configmap.yaml -n grocery-api
 
         # Apply database and Redis
         echo "Deploying database and Redis..."
-        kubectl apply -f k8s/db-deployment.yaml -f k8s/db-service.yaml -n ${NAMESPACE}
-        kubectl apply -f k8s/redis-deployment.yaml -f k8s/redis-service.yaml -n ${NAMESPACE}
+        kubectl apply -f k8s/db-deployment.yaml -f k8s/db-service.yaml -n grocery-api
+        kubectl apply -f k8s/redis-deployment.yaml -f k8s/redis-service.yaml -n grocery-api
 
         # Wait for database to be ready
         echo "Waiting for database to be ready..."
-        kubectl wait --for=condition=available deployment/db --timeout=120s -n ${NAMESPACE} || true
+        kubectl wait --for=condition=available deployment/db --timeout=120s -n grocery-api || true
 
         # Apply web and celery deployments
         echo "Deploying web and celery services..."
-        kubectl apply -f k8s/web-deployment.yaml -f k8s/web-service.yaml -n ${NAMESPACE}
-        kubectl apply -f k8s/celery-deployment.yaml -n ${NAMESPACE}
+        kubectl apply -f k8s/web-deployment.yaml -f k8s/web-service.yaml -n grocery-api
+        kubectl apply -f k8s/celery-deployment.yaml -n grocery-api
 
         # Check deployment status
         echo "Checking deployment status..."
-        kubectl get pods -n ${NAMESPACE}
-        EOF
-        echo "Deployment commands executed"
-
-    - name: Verify deployment
-      run: |
-        echo "Verifying deployment..."
-        ssh -i ~/.ssh/id_ed25519 ${{ env.SERVER_USER }}@${{ env.SERVER_HOST }} << EOF
-        # Check if services are running properly
-        kubectl get pods -n ${NAMESPACE}
-        kubectl get services -n ${NAMESPACE}
+        kubectl get pods -n grocery-api
 
         # Get web service URL
-        WEB_URL=\$(kubectl get service web -n ${NAMESPACE} -o jsonpath='{.spec.clusterIP}')
-        echo "Web service is available at: \$WEB_URL"
+        WEB_URL=$(kubectl get service web -n grocery-api -o jsonpath='{.spec.clusterIP}')
+        echo "Web service is available at: $WEB_URL"
         EOF
-        echo "Deployment verification completed"
