@@ -39,11 +39,27 @@ jobs:
         mkdir -p ~/.ssh
         echo "${{ secrets.GCP_SSH_KEY }}" > ~/.ssh/id_ed25519
         chmod 600 ~/.ssh/id_ed25519
-        # Using explicit IP address from secrets
-        ssh-keyscan -H ${{ secrets.SERVER_HOST }} >> ~/.ssh/known_hosts
-        echo "SSH setup completed"
-        # Test connection with the secret key
-        ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_ed25519 ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} 'echo "Connected from GitHub Actions!"'
+
+        # Debug step (will mask sensitive data)
+        echo "SERVER_HOST is set: ${{ secrets.SERVER_HOST != '' }}"
+        echo "SERVER_USER is set: ${{ secrets.SERVER_USER != '' }}"
+
+        # Using the server host from secrets
+        if [ -n "${{ secrets.SERVER_HOST }}" ]; then
+          ssh-keyscan -H "${{ secrets.SERVER_HOST }}" >> ~/.ssh/known_hosts
+          echo "SSH keyscan completed"
+
+          # Test connection with the secret key
+          if [ -n "${{ secrets.SERVER_USER }}" ]; then
+            ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_ed25519 "${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}" 'echo "Connected from GitHub Actions!"'
+          else
+            echo "ERROR: SERVER_USER secret is not set"
+            exit 1
+          fi
+        else
+          echo "ERROR: SERVER_HOST secret is not set"
+          exit 1
+        fi
 
     - name: Upload Docker image to server
       run: |
