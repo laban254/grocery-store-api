@@ -128,5 +128,4 @@ class GroceryAdminSite(admin.AdminSite):
         )
 
 
-# Create custom admin site instance
 grocery_admin_site = GroceryAdminSite(name="grocery_admin")

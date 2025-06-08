@@ -40,7 +40,6 @@ class OAuthLoginView(APIView):
         if self.oauth2_adapter is None:
             return HttpResponseRedirect(reverse(f"{self.provider_name}_login"))
 
-        # Get the client ID from settings
         client_id = (
             settings.SOCIALACCOUNT_PROVIDERS.get(self.provider_name, {})
             .get("APP", {})
@@ -51,7 +50,6 @@ class OAuthLoginView(APIView):
                 {"error": f"No client ID configured for {self.provider_name}"}, status=400
             )
 
-        # Build the redirect URI
         redirect_uri = request.build_absolute_uri(reverse(f"api-{self.provider_name}-callback"))
 
         # Get authorization URL and parameters from the adapter
@@ -74,7 +72,6 @@ class OAuthLoginView(APIView):
             ),
         }
 
-        # Construct the full authorization URL with parameters
         full_url = f"{authorization_url}?{urlencode(params)}"
         return HttpResponseRedirect(full_url)
 
@@ -247,7 +244,6 @@ class OAuthCallbackView(APIView):
         user, created = User.objects.get_or_create(email=email, defaults=defaults)
 
         if not created:
-            # Update OIDC info for existing users
             user.oidc_id = user_info.get("id")
             user.oidc_provider = self.provider_name
             if user_info.get("given_name") and not user.first_name:
@@ -292,7 +288,6 @@ class OAuthCallbackView(APIView):
         if not code:
             return Response({"error": "No authorization code provided"}, status=400)
 
-        # Get client credentials
         client_id, client_secret = self._get_client_credentials()
         if not client_id or not client_secret:
             return Response(
@@ -300,23 +295,19 @@ class OAuthCallbackView(APIView):
                 status=400,
             )
 
-        # Exchange code for token
         token_data = self._get_token_data(request, code, client_id, client_secret)
         access_token, error = self._exchange_code_for_token(token_data)
         if error:
             return Response({"error": error}, status=400)
 
-        # Get user info
         user_info = self.get_user_info(access_token)
         if not user_info:
             return Response({"error": "Failed to obtain user information"}, status=400)
 
-        # Create or update user
         user, error = self._create_or_update_user(user_info)
         if error:
             return Response({"error": error}, status=400)
 
-        # Get or create social account
         social_account, _ = SocialAccount.objects.get_or_create(
             provider=self.provider_name,
             uid=user_info["id"],

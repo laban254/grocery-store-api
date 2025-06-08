@@ -2,7 +2,6 @@ from drf_spectacular.utils import OpenApiExample
 from rest_framework import status
 
 
-# Helper functions to make response schemas more concise
 def create_success_example(title, data, message, status_code):
     """Create a standardized success response example for API documentation"""
     return {

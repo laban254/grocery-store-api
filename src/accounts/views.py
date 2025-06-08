@@ -64,13 +64,11 @@ class UserInfoView(APIView):
         user = request.user
         user_data = UserSerializer(user).data
 
-        # Add OIDC specific information if available
         if hasattr(user, "oidc_id"):
             user_data["oidc_id"] = user.oidc_id
         if hasattr(user, "oidc_provider"):
             user_data["oidc_provider"] = user.oidc_provider
 
-        # Get any social accounts
         social_accounts = []
         if hasattr(user, "socialaccount_set"):
             for account in user.socialaccount_set.all():

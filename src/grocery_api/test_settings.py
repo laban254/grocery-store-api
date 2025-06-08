@@ -22,6 +22,5 @@ DATABASES = {
 
 TEST_DATABASE_PREFIX = "test_"
 
-# use an existing database rather than trying to create a new one
 TEST_DATABASE_CREATE = False
 TEST_DATABASE_NAME = os.environ.get("TEST_POSTGRES_DB", "grocery_api_test")
