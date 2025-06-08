@@ -2,7 +2,7 @@ name: Continuous Delivery
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "staging" ]
     paths-ignore:
       - "README.md"
       - "KUBERNETES.md"
