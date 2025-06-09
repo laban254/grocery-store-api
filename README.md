@@ -1,21 +1,23 @@
 # Grocery API
 
-A Django-based REST API for managing a grocery store with Kubernetes deployment support.
+A Django-based REST API for managing a grocery store with Kubernetes deployment support and CI/CD integration.
 
 ## Features
 
 - Authentication & Authorization with JWT
 - Product Management and Categories
-- Asynchronous Order Processing
+- Asynchronous Order Processing with Celery
 - API Documentation (OpenAPI/Swagger)
 - Kubernetes Deployment Support
+- CI/CD Pipeline with GitHub Actions
 
 ## Tech Stack
 
-- Django 5.2 + DRF 3.16
-- PostgreSQL 14 + Redis
-- Celery for Background Tasks
+- Django 4.2.7 + DRF 3.14
+- PostgreSQL 14 + Redis 6
+- Celery 5.3.6 for Background Tasks
 - Docker + Kubernetes
+- GitHub Actions for CI/CD
 
 ## Quick Start
 
@@ -92,6 +94,25 @@ src/
 - [Docker Setup](DOCKER.md)
 - [Kubernetes Deployment](KUBERNETES.md)
 - [Application Startup](STARTUP.md)
+
+## CI/CD Pipeline
+
+The project includes a complete CI/CD pipeline using GitHub Actions:
+
+### Continuous Integration (CI)
+- Triggered on pull requests to main, staging, and dev branches
+- Runs code quality checks (Black, Flake8)
+- Executes tests with coverage reporting
+- Validates database migrations
+
+### Continuous Deployment (CD)
+- Triggered on pushes to production branch or manual workflow dispatch
+- Builds Docker image
+- Deploys to Kubernetes cluster
+- Applies all necessary Kubernetes configurations
+- Verifies deployment success
+
+For more details, see the workflow files in `.github/workflows/`.
 
 ## License
 
