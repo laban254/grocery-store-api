@@ -1,21 +1,23 @@
 # Grocery API
 
-A Django-based REST API for managing a grocery store with Kubernetes deployment support.
+A Django-based REST API for managing a grocery store with Kubernetes deployment support and CI/CD integration.
 
 ## Features
 
 - Authentication & Authorization with JWT
 - Product Management and Categories
-- Asynchronous Order Processing
+- Asynchronous Order Processing with Celery
 - API Documentation (OpenAPI/Swagger)
 - Kubernetes Deployment Support
+- CI/CD Pipeline with GitHub Actions
 
 ## Tech Stack
 
-- Django 5.2 + DRF 3.16
-- PostgreSQL 14 + Redis
-- Celery for Background Tasks
+- Django 4.2.7 + DRF 3.14
+- PostgreSQL 14 + Redis 6
+- Celery 5.3.6 for Background Tasks
 - Docker + Kubernetes
+- GitHub Actions for CI/CD
 
 ## Quick Start
 
@@ -51,8 +53,18 @@ Access the API documentation at:
 
 ### Testing
 ```bash
-# Run tests with coverage
+# Run tests with coverage (with Docker)
 docker-compose exec web pytest --cov
+
+# Run tests with coverage (local development with venv)
+cd src
+pytest
+# or from project root
+pytest src --cov=src
+
+# For more detailed coverage reports
+pytest --cov-report=term-missing  # Shows missing lines
+pytest --cov-report=html  # Generates HTML report
 ```
 
 ### Code Quality
@@ -71,6 +83,25 @@ docker-compose logs -f
 
 # Run Django commands
 docker-compose exec web python src/manage.py [command]
+```
+
+### Celery Workers
+
+When using Docker Compose, Celery workers are started automatically. However, if you need to:
+
+```bash
+# View Celery logs
+docker-compose logs -f celery
+
+# Restart Celery workers
+docker-compose restart celery
+
+# Run Celery manually (local development without Docker)
+cd src
+celery -A grocery_api worker -l INFO
+
+# Monitor Celery tasks with Flower
+celery -A grocery_api flower --port=5555
 ```
 
 For deployment instructions, see [KUBERNETES.md](KUBERNETES.md)
@@ -93,11 +124,51 @@ src/
 - [Kubernetes Deployment](KUBERNETES.md)
 - [Application Startup](STARTUP.md)
 
+## CI/CD Pipeline
+
+The project includes a complete CI/CD pipeline using GitHub Actions:
+
+### Continuous Integration (CI)
+- Triggered on pull requests to main, staging, and dev branches
+- Runs code quality checks (Black, Flake8)
+- Executes tests with coverage reporting
+- Validates database migrations
+
+### Continuous Deployment (CD)
+- Triggered on pushes to production branch or manual workflow dispatch
+- Builds Docker image
+- Deploys to Kubernetes cluster
+- Applies all necessary Kubernetes configurations
+- Verifies deployment success
+
+For more details, see the workflow files in `.github/workflows/`.
+
 ## License
 
 MIT License
 
 ## Troubleshooting
+
+### Common Issues
+
+#### Docker Compose Issues
+- **Port conflicts**: Check if ports 8000, 5432, or 6380 are already in use
+- **Database connection errors**: Ensure the database container is running with `docker-compose ps db`
+- **Permission issues**: If you encounter permission issues with mounted volumes, run `chmod -R 777` on the affected directories
+
+#### Kubernetes Deployment Issues
+- **Image pulling errors**: Ensure the image is built locally with `docker build -t grocery_api:latest .`
+- **ConfigMap issues**: Verify all required ConfigMaps are applied before deploying Pods
+- **Database connectivity**: Check if the database service is correctly configured and running
+
+#### CI/CD Pipeline Issues
+- **Build failures**: Check the GitHub Actions logs for specific error details
+- **Deployment failures**: Verify all required secrets are properly set in your GitHub repository
+- **Database migration issues**: Ensure migrations are compatible with your database version
+
+For detailed logs, use `docker-compose logs <service>` or `kubectl logs <pod-name>`.
+
+For more troubleshooting information, refer to [DOCKER.md](DOCKER.md) and [KUBERNETES.md](KUBERNETES.md).
 
 ### Common Issues
 1. **Pod Startup Failures**

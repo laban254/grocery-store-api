@@ -2,7 +2,7 @@ name: CI
 
 on:
   pull_request:
-    branches: ["main", "staging", "dev"]
+    branches: ["dev"]
     types: [opened, synchronize, reopened]
     paths-ignore:
       - "README.md"
@@ -45,12 +45,12 @@ jobs:
 
     steps:
     - name: Checkout code
-      uses: actions/checkout@v2
+      uses: actions/checkout@v4
 
     - name: Set up Python
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v5
       with:
-        python-version: '3.8'
+        python-version: '3.10'
 
     - name: Install dependencies
       run: |
@@ -91,7 +91,7 @@ jobs:
     - name: Run tests with coverage
       run: |
         cd src
-        pytest --cov --cov-report=xml --disable-warnings
+        pytest --cov --cov-report=xml --cov-report=term --cov-fail-under=70 --disable-warnings
       env:
         DATABASE_NAME: postgres
         DATABASE_USER: postgres
@@ -100,10 +100,51 @@ jobs:
         DATABASE_PORT: 5432
         ALLOWED_HOSTS: 'localhost,127.0.0.1'
         DEBUG: 'False'
-        DJANGO_SETTINGS_MODULE: 'grocery_api.settings'
+        DJANGO_SETTINGS_MODULE: 'grocery_api.test_settings'
         PYTHONPATH: ${{ github.workspace }}/src
 
     - name: Upload coverage results to Codecov
       uses: codecov/codecov-action@v4
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
+        file: ./src/coverage.xml
+        fail_ci_if_error: true
+        verbose: true
+
+    - name: Generate coverage badge
+      uses: actions/github-script@v7
+      if: github.ref == 'refs/heads/main'
+      with:
+        script: |
+          const fs = require('fs');
+          const xml2js = require('xml2js');
+
+          // Parse coverage XML
+          const parser = new xml2js.Parser();
+          const xml = fs.readFileSync('./src/coverage.xml', 'utf8');
+
+          parser.parseString(xml, (err, result) => {
+            if (err) {
+              console.error('Error parsing coverage XML:', err);
+              return;
+            }
+
+            const coverage = result.coverage.$.line-rate * 100;
+            const color = coverage >= 80 ? 'brightgreen' :
+                         coverage >= 70 ? 'green' :
+                         coverage >= 60 ? 'yellowgreen' :
+                         coverage >= 50 ? 'yellow' : 'red';
+
+            // Create badge using shields.io
+            const badgeUrl = `https://img.shields.io/badge/coverage-${coverage.toFixed(0)}%25-${color}`;
+
+            // Add to README if not already there
+            let readme = fs.readFileSync('README.md', 'utf8');
+            if (!readme.includes('![Code Coverage]')) {
+              const badgeLine = `[![Code Coverage](${badgeUrl})](https://github.com/${process.env.GITHUB_REPOSITORY}/actions)\n`;
+              const titleEnd = readme.indexOf('\n\n');
+              readme = readme.slice(0, titleEnd) + '\n' + badgeLine + readme.slice(titleEnd);
+              fs.writeFileSync('README.md', readme);
+            }
+          });
+        result-encoding: string
