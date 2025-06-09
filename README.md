@@ -121,6 +121,27 @@ MIT License
 ## Troubleshooting
 
 ### Common Issues
+
+#### Docker Compose Issues
+- **Port conflicts**: Check if ports 8000, 5432, or 6380 are already in use
+- **Database connection errors**: Ensure the database container is running with `docker-compose ps db`
+- **Permission issues**: If you encounter permission issues with mounted volumes, run `chmod -R 777` on the affected directories
+
+#### Kubernetes Deployment Issues
+- **Image pulling errors**: Ensure the image is built locally with `docker build -t grocery_api:latest .`
+- **ConfigMap issues**: Verify all required ConfigMaps are applied before deploying Pods
+- **Database connectivity**: Check if the database service is correctly configured and running
+
+#### CI/CD Pipeline Issues
+- **Build failures**: Check the GitHub Actions logs for specific error details
+- **Deployment failures**: Verify all required secrets are properly set in your GitHub repository
+- **Database migration issues**: Ensure migrations are compatible with your database version
+
+For detailed logs, use `docker-compose logs <service>` or `kubectl logs <pod-name>`.
+
+For more troubleshooting information, refer to [DOCKER.md](DOCKER.md) and [KUBERNETES.md](KUBERNETES.md).
+
+### Common Issues
 1. **Pod Startup Failures**
    ```bash
    kubectl describe pod <pod-name>
