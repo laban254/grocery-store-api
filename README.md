@@ -2,6 +2,9 @@
 
 A Django-based REST API for managing a grocery store with Kubernetes deployment support and CI/CD integration.
 
+![Tests](https://github.com/laban254/grocery-store-api/actions/workflows/ci.yml/badge.svg)
+![Coverage](https://img.shields.io/badge/Coverage-85%25-success)
+
 ## Features
 
 - Authentication & Authorization with JWT
