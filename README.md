@@ -53,8 +53,18 @@ Access the API documentation at:
 
 ### Testing
 ```bash
-# Run tests with coverage
+# Run tests with coverage (with Docker)
 docker-compose exec web pytest --cov
+
+# Run tests with coverage (local development with venv)
+cd src
+pytest
+# or from project root
+pytest src --cov=src
+
+# For more detailed coverage reports
+pytest --cov-report=term-missing  # Shows missing lines
+pytest --cov-report=html  # Generates HTML report
 ```
 
 ### Code Quality
@@ -73,6 +83,25 @@ docker-compose logs -f
 
 # Run Django commands
 docker-compose exec web python src/manage.py [command]
+```
+
+### Celery Workers
+
+When using Docker Compose, Celery workers are started automatically. However, if you need to:
+
+```bash
+# View Celery logs
+docker-compose logs -f celery
+
+# Restart Celery workers
+docker-compose restart celery
+
+# Run Celery manually (local development without Docker)
+cd src
+celery -A grocery_api worker -l INFO
+
+# Monitor Celery tasks with Flower
+celery -A grocery_api flower --port=5555
 ```
 
 For deployment instructions, see [KUBERNETES.md](KUBERNETES.md)
