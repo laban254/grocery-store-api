@@ -17,8 +17,6 @@ jobs:
     env:
       IMAGE_NAME: grocery_api
       IMAGE_TAG: latest
-      SERVER_HOST: 35.192.12.145
-      SERVER_USER: github-actions
       NAMESPACE: grocery-api
 
     steps:
@@ -35,82 +33,96 @@ jobs:
         docker save ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }} > ${{ env.IMAGE_NAME }}.tar
         echo "Docker image built and saved successfully"
 
-    - name: Set up SSH connection
+    - name: Set up SSH and deploy
       run: |
         echo "Setting up SSH connection..."
         mkdir -p ~/.ssh
         echo "${{ secrets.GCP_SSH_KEY }}" > ~/.ssh/id_ed25519
         chmod 600 ~/.ssh/id_ed25519
-        ssh-keyscan -H ${{ env.SERVER_HOST }} >> ~/.ssh/known_hosts
-        echo "SSH setup completed"
 
-    - name: Upload Docker image to server
-      run: |
-        echo "Uploading Docker image to server..."
-        scp -i ~/.ssh/id_ed25519 ${{ env.IMAGE_NAME }}.tar ${{ env.SERVER_USER }}@${{ env.SERVER_HOST }}:~/${{ env.IMAGE_NAME }}.tar
-        echo "Image uploaded successfully"
+        # Debug step (will mask sensitive data)
+        echo "SERVER_HOST is set: ${{ secrets.SERVER_HOST != '' }}"
+        echo "SERVER_USER is set: ${{ secrets.SERVER_USER != '' }}"
 
-    - name: Deploy to Kubernetes
-      run: |
-        echo "Deploying to Kubernetes..."
-        ssh -i ~/.ssh/id_ed25519 ${{ env.SERVER_USER }}@${{ env.SERVER_HOST }} << EOF
-        # Load the Docker image
-        echo "Loading Docker image..."
-        docker load < ${IMAGE_NAME}.tar
-
-        # Clone or update deployment repository
-        echo "Updating deployment files..."
-        mkdir -p ~/grocery_api_deploy
-        if [ ! -d "~/grocery_api_deploy/.git" ]; then
-          git clone \$(git config --get remote.origin.url) ~/grocery_api_deploy
-        else
-          cd ~/grocery_api_deploy
-          git pull
+        # Validate secrets are set
+        if [ -z "${{ secrets.SERVER_HOST }}" ]; then
+          echo "ERROR: SERVER_HOST secret is not set"
+          exit 1
         fi
 
-        # Apply Kubernetes manifests
-        cd ~/grocery_api_deploy
+        if [ -z "${{ secrets.SERVER_USER }}" ]; then
+          echo "ERROR: SERVER_USER secret is not set"
+          exit 1
+        fi
 
-        # Create namespace if it doesn't exist
-        echo "Creating/verifying namespace..."
-        kubectl create namespace ${NAMESPACE} --dry-run=client -o yaml | kubectl apply -f -
+        # Add server to known hosts
+        ssh-keyscan -H "${{ secrets.SERVER_HOST }}" >> ~/.ssh/known_hosts
+        echo "SSH keyscan completed"
 
-        # Apply ConfigMaps first
-        echo "Applying ConfigMaps..."
-        kubectl apply -f k8s/env-configmap.yaml -n ${NAMESPACE}
-        kubectl apply -f k8s/web-cm0-configmap.yaml -n ${NAMESPACE}
-        kubectl apply -f k8s/celery-cm0-configmap.yaml -n ${NAMESPACE}
+        # Test connection
+        echo "Testing SSH connection..."
+        ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_ed25519 "${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}" 'echo "Connected successfully!"'
 
-        # Apply database and Redis
-        echo "Deploying database and Redis..."
-        kubectl apply -f k8s/db-deployment.yaml -f k8s/db-service.yaml -n ${NAMESPACE}
-        kubectl apply -f k8s/redis-deployment.yaml -f k8s/redis-service.yaml -n ${NAMESPACE}
+        # Upload Docker image
+        echo "Uploading Docker image..."
+        scp -i ~/.ssh/id_ed25519 ${{ env.IMAGE_NAME }}.tar ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:~/${{ env.IMAGE_NAME }}.tar
+        echo "Image uploaded successfully"
 
-        # Wait for database to be ready
-        echo "Waiting for database to be ready..."
-        kubectl wait --for=condition=available deployment/db --timeout=120s -n ${NAMESPACE} || true
+        # Execute all deployment commands in a single SSH session
+        echo "Executing deployment commands..."
+        ssh -i ~/.ssh/id_ed25519 "${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}" << EOF
+          # Load the Docker image
+          echo "Loading Docker image..."
+          docker load < ${{ env.IMAGE_NAME }}.tar
 
-        # Apply web and celery deployments
-        echo "Deploying web and celery services..."
-        kubectl apply -f k8s/web-deployment.yaml -f k8s/web-service.yaml -n ${NAMESPACE}
-        kubectl apply -f k8s/celery-deployment.yaml -n ${NAMESPACE}
+          # Clone or update deployment repository
+          echo "Updating deployment files..."
+          mkdir -p ~/grocery_api_deploy
+          if [ ! -d ~/grocery_api_deploy/.git ]; then
+            git clone \$(git config --get remote.origin.url) ~/grocery_api_deploy
+          else
+            cd ~/grocery_api_deploy
+            git pull
+          fi
 
-        # Check deployment status
-        echo "Checking deployment status..."
-        kubectl get pods -n ${NAMESPACE}
-        EOF
-        echo "Deployment commands executed"
+          # Apply Kubernetes manifests
+          cd ~/grocery_api_deploy
 
-    - name: Verify deployment
-      run: |
-        echo "Verifying deployment..."
-        ssh -i ~/.ssh/id_ed25519 ${{ env.SERVER_USER }}@${{ env.SERVER_HOST }} << EOF
-        # Check if services are running properly
-        kubectl get pods -n ${NAMESPACE}
-        kubectl get services -n ${NAMESPACE}
+          # Create namespace if it doesn't exist
+          echo "Creating/verifying namespace..."
+          kubectl create namespace ${NAMESPACE} --dry-run=client -o yaml | kubectl apply -f -
 
-        # Get web service URL
-        WEB_URL=\$(kubectl get service web -n ${NAMESPACE} -o jsonpath='{.spec.clusterIP}')
-        echo "Web service is available at: \$WEB_URL"
-        EOF
-        echo "Deployment verification completed"
+          # Apply ConfigMaps first
+          echo "Applying ConfigMaps..."
+          kubectl apply -f k8s/env-configmap.yaml -n ${NAMESPACE}
+          kubectl apply -f k8s/web-cm0-configmap.yaml -n ${NAMESPACE}
+          kubectl apply -f k8s/celery-cm0-configmap.yaml -n ${NAMESPACE}
+
+          # Apply database and Redis
+          echo "Deploying database and Redis..."
+          kubectl apply -f k8s/db-deployment.yaml -f k8s/db-service.yaml -n ${NAMESPACE}
+          kubectl apply -f k8s/redis-deployment.yaml -f k8s/redis-service.yaml -n ${NAMESPACE}
+
+          # Wait for database to be ready
+          echo "Waiting for database to be ready..."
+          kubectl wait --for=condition=available deployment/db --timeout=120s -n ${NAMESPACE} || true
+
+          # Apply web and celery deployments
+          echo "Deploying web and celery services..."
+          kubectl apply -f k8s/web-deployment.yaml -f k8s/web-service.yaml -n ${NAMESPACE}
+          kubectl apply -f k8s/celery-deployment.yaml -n ${NAMESPACE}
+
+          # Check deployment status
+          echo "Checking deployment status..."
+          kubectl get pods -n ${NAMESPACE}
+
+          # Get web service URL and verify the deployment
+          echo "Verifying deployment..."
+          kubectl get services -n ${NAMESPACE}
+          WEB_URL=\$(kubectl get service web -n ${NAMESPACE} -o jsonpath='{.spec.clusterIP}')
+          echo "Web service is available at: \$WEB_URL"
+
+          # Clean up
+          echo "Cleaning up..."
+          rm -f ~/${{ env.IMAGE_NAME }}.tar
+          echo "Deployment complete!"

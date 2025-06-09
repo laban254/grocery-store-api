@@ -1,9 +1,8 @@
 name: CI
 
 on:
-  pull_request:
-    branches: ["main", "staging", "dev"]
-    types: [opened, synchronize, reopened]
+  push:
+    branches: ["dev"]
     paths-ignore:
       - "README.md"
       - ".github/workflows/**"
@@ -45,12 +44,12 @@ jobs:
 
     steps:
     - name: Checkout code
-      uses: actions/checkout@v2
+      uses: actions/checkout@v4
 
     - name: Set up Python
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v5
       with:
-        python-version: '3.8'
+        python-version: '3.10'
 
     - name: Install dependencies
       run: |
@@ -91,7 +90,7 @@ jobs:
     - name: Run tests with coverage
       run: |
         cd src
-        pytest --cov --cov-report=xml --disable-warnings
+        pytest --cov --cov-report=xml --cov-report=term --cov-fail-under=70 --disable-warnings
       env:
         DATABASE_NAME: postgres
         DATABASE_USER: postgres
@@ -100,10 +99,41 @@ jobs:
         DATABASE_PORT: 5432
         ALLOWED_HOSTS: 'localhost,127.0.0.1'
         DEBUG: 'False'
-        DJANGO_SETTINGS_MODULE: 'grocery_api.settings'
+        DJANGO_SETTINGS_MODULE: 'grocery_api.test_settings'
         PYTHONPATH: ${{ github.workspace }}/src
 
     - name: Upload coverage results to Codecov
       uses: codecov/codecov-action@v4
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
+        file: ./src/coverage.xml
+        fail_ci_if_error: true
+        verbose: true
+
+    - name: Generate coverage badge
+      if: success() && github.event_name != 'pull_request'
+      run: |
+        COVERAGE=$(python -c 'import xml.etree.ElementTree as ET; print(round(float(ET.parse("./src/coverage.xml").getroot().get("line-rate"))*100))')
+        echo "Coverage: $COVERAGE%"
+
+        # Determine badge color based on coverage percentage
+        if [ "$COVERAGE" -ge 80 ]; then
+          COLOR=success
+        elif [ "$COVERAGE" -ge 70 ]; then
+          COLOR=yellow
+        else
+          COLOR=red
+        fi
+
+        # Update badge in README
+        echo "![Coverage](https://img.shields.io/badge/Coverage-${COVERAGE}%25-${COLOR})" > coverage_badge.txt
+
+        # For debugging
+        echo "Generated badge: ![Coverage](https://img.shields.io/badge/Coverage-${COVERAGE}%25-${COLOR})"
+
+    - name: Upload coverage badge as artifact
+      if: success() && github.event_name != 'pull_request'
+      uses: actions/upload-artifact@v4
+      with:
+        name: coverage-badge
+        path: coverage_badge.txt
