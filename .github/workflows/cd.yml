@@ -2,7 +2,7 @@ name: Continuous Delivery
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "feat/ci-test" ]
     paths-ignore:
       - "README.md"
       - "KUBERNETES.md"
@@ -37,43 +37,21 @@ jobs:
       run: |
         echo "Setting up SSH connection..."
         mkdir -p ~/.ssh
-
-        # Debug all secrets availability (without revealing their values)
-        echo "### DEBUGGING SECRET AVAILABILITY ###"
-        echo "GCP_SSH_KEY is empty: ${{ secrets.GCP_SSH_KEY == '' }}"
-        echo "SERVER_HOST is empty: ${{ secrets.SERVER_HOST == '' }}"
-        echo "SERVER_USER is empty: ${{ secrets.SERVER_USER == '' }}"
-        echo "GCP_SSH_KEY length: ${{ secrets.GCP_SSH_KEY != '' && '(not empty)' || '(empty)' }}"
-        echo "SERVER_HOST length: ${{ secrets.SERVER_HOST != '' && '(not empty)' || '(empty)' }}"
-        echo "SERVER_USER length: ${{ secrets.SERVER_USER != '' && '(not empty)' || '(empty)' }}"
-        echo "###################################"
-
-        # Check for SSH key specifically
-        if [ -z "${{ secrets.GCP_SSH_KEY }}" ]; then
-          echo "ERROR: GCP_SSH_KEY secret is not set or is empty"
-          exit 1
-        fi
-
         echo "${{ secrets.GCP_SSH_KEY }}" > ~/.ssh/id_ed25519
         chmod 600 ~/.ssh/id_ed25519
 
-        # Check if the SSH key file was created properly
-        if [ ! -s ~/.ssh/id_ed25519 ]; then
-          echo "ERROR: SSH key file is empty after writing"
-          exit 1
-        else
-          echo "SSH key file created successfully with content"
-        fi
+        # Debug step (will mask sensitive data)
+        echo "SERVER_HOST is set: ${{ secrets.SERVER_HOST != '' }}"
+        echo "SERVER_USER is set: ${{ secrets.SERVER_USER != '' }}"
 
-        # Validate SERVER_HOST
+        # Validate secrets are set
         if [ -z "${{ secrets.SERVER_HOST }}" ]; then
-          echo "ERROR: SERVER_HOST secret is not set or is empty"
+          echo "ERROR: SERVER_HOST secret is not set"
           exit 1
         fi
 
-        # Validate SERVER_USER
         if [ -z "${{ secrets.SERVER_USER }}" ]; then
-          echo "ERROR: SERVER_USER secret is not set or is empty"
+          echo "ERROR: SERVER_USER secret is not set"
           exit 1
         fi
 
