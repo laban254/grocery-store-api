@@ -77,12 +77,11 @@ jobs:
 
           # Clone or update deployment repository
           echo "Updating deployment files..."
-          mkdir -p ~/grocery_api_deploy
-          if [ ! -d ~/grocery_api_deploy/.git ]; then
-            git clone \$(git config --get remote.origin.url) ~/grocery_api_deploy
+          if [ ! -d ~/grocery_api_deploy ]; then
+            git clone https://github.com/laban254/grocery-store-api.git ~/grocery_api_deploy
           else
             cd ~/grocery_api_deploy
-            git pull
+            git pull origin staging
           fi
 
           # Apply Kubernetes manifests
