@@ -76,7 +76,7 @@ jobs:
         echo "Updating deployment files on remote server..."
         ssh -i ~/.ssh/id_ed25519 "${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}" "
           if [ ! -d ~/grocery_api_deploy ]; then
-            git clone https://github.com/laban254/grocery-store-api.git ~/grocery_api_deploy
+            git clone git@github.com:laban254/grocery-store-api.git ~/grocery_api_deploy
           else
             cd ~/grocery_api_deploy && git pull origin staging
           fi
