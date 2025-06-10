@@ -68,60 +68,59 @@ jobs:
         scp -i ~/.ssh/id_ed25519 ${{ env.IMAGE_NAME }}.tar ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:~/${{ env.IMAGE_NAME }}.tar
         echo "Image uploaded successfully"
 
-        # Execute all deployment commands in a single SSH session
-        echo "Executing deployment commands..."
-        ssh -i ~/.ssh/id_ed25519 "${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}" << EOF
-          # Load the Docker image
-          echo "Loading Docker image..."
-          docker load < ${{ env.IMAGE_NAME }}.tar
+        # Load Docker image on remote server
+        echo "Loading Docker image on remote server..."
+        ssh -i ~/.ssh/id_ed25519 "${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}" "docker load < ${{ env.IMAGE_NAME }}.tar"
 
-          # Clone or update deployment repository
-          echo "Updating deployment files..."
+        # Clone or update repository
+        echo "Updating deployment files on remote server..."
+        ssh -i ~/.ssh/id_ed25519 "${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}" "
           if [ ! -d ~/grocery_api_deploy ]; then
             git clone https://github.com/laban254/grocery-store-api.git ~/grocery_api_deploy
           else
-            cd ~/grocery_api_deploy
-            git pull origin staging
+            cd ~/grocery_api_deploy && git pull origin staging
           fi
+        "
 
-          # Apply Kubernetes manifests
-          cd ~/grocery_api_deploy
+        # Apply Kubernetes configurations
+        echo "Applying Kubernetes configurations..."
+        ssh -i ~/.ssh/id_ed25519 "${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}" "
+          cd ~/grocery_api_deploy &&
+          kubectl create namespace ${{ env.NAMESPACE }} --dry-run=client -o yaml | kubectl apply -f - &&
+          kubectl apply -f k8s/env-configmap.yaml -n ${{ env.NAMESPACE }} &&
+          kubectl apply -f k8s/web-cm0-configmap.yaml -n ${{ env.NAMESPACE }} &&
+          kubectl apply -f k8s/celery-cm0-configmap.yaml -n ${{ env.NAMESPACE }} &&
+          kubectl apply -f k8s/db-deployment.yaml -f k8s/db-service.yaml -n ${{ env.NAMESPACE }} &&
+          kubectl apply -f k8s/redis-deployment.yaml -f k8s/redis-service.yaml -n ${{ env.NAMESPACE }}
+        "
 
-          # Create namespace if it doesn't exist
-          echo "Creating/verifying namespace..."
-          kubectl create namespace ${NAMESPACE} --dry-run=client -o yaml | kubectl apply -f -
+        # Wait for database
+        echo "Waiting for database to be ready..."
+        ssh -i ~/.ssh/id_ed25519 "${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}" "
+          kubectl wait --for=condition=available deployment/db --timeout=120s -n ${{ env.NAMESPACE }} || true
+        "
 
-          # Apply ConfigMaps first
-          echo "Applying ConfigMaps..."
-          kubectl apply -f k8s/env-configmap.yaml -n ${NAMESPACE}
-          kubectl apply -f k8s/web-cm0-configmap.yaml -n ${NAMESPACE}
-          kubectl apply -f k8s/celery-cm0-configmap.yaml -n ${NAMESPACE}
+        # Deploy web and celery
+        echo "Deploying web and celery services..."
+        ssh -i ~/.ssh/id_ed25519 "${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}" "
+          cd ~/grocery_api_deploy &&
+          kubectl apply -f k8s/web-deployment.yaml -f k8s/web-service.yaml -n ${{ env.NAMESPACE }} &&
+          kubectl apply -f k8s/celery-deployment.yaml -n ${{ env.NAMESPACE }}
+        "
 
-          # Apply database and Redis
-          echo "Deploying database and Redis..."
-          kubectl apply -f k8s/db-deployment.yaml -f k8s/db-service.yaml -n ${NAMESPACE}
-          kubectl apply -f k8s/redis-deployment.yaml -f k8s/redis-service.yaml -n ${NAMESPACE}
+        # Check deployment status
+        echo "Checking deployment status..."
+        ssh -i ~/.ssh/id_ed25519 "${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}" "
+          kubectl get pods -n ${{ env.NAMESPACE }}
+        "
 
-          # Wait for database to be ready
-          echo "Waiting for database to be ready..."
-          kubectl wait --for=condition=available deployment/db --timeout=120s -n ${NAMESPACE} || true
-
-          # Apply web and celery deployments
-          echo "Deploying web and celery services..."
-          kubectl apply -f k8s/web-deployment.yaml -f k8s/web-service.yaml -n ${NAMESPACE}
-          kubectl apply -f k8s/celery-deployment.yaml -n ${NAMESPACE}
-
-          # Check deployment status
-          echo "Checking deployment status..."
-          kubectl get pods -n ${NAMESPACE}
-
-          # Get web service URL and verify the deployment
-          echo "Verifying deployment..."
-          kubectl get services -n ${NAMESPACE}
-          WEB_URL=\$(kubectl get service web -n ${NAMESPACE} -o jsonpath='{.spec.clusterIP}')
-          echo "Web service is available at: \$WEB_URL"
-
-          # Clean up
-          echo "Cleaning up..."
+        # Verify and cleanup
+        echo "Verifying deployment and cleaning up..."
+        ssh -i ~/.ssh/id_ed25519 "${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}" "
+          kubectl get services -n ${{ env.NAMESPACE }} &&
+          WEB_URL=\$(kubectl get service web -n ${{ env.NAMESPACE }} -o jsonpath='{.spec.clusterIP}') &&
+          echo \"Web service is available at: \$WEB_URL\" &&
           rm -f ~/${{ env.IMAGE_NAME }}.tar
-          echo "Deployment complete!"
+        "
+
+        echo "Deployment complete!"
