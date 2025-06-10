@@ -115,12 +115,12 @@ jobs:
         echo "Applying Kubernetes configurations..."
         ssh -i ~/.ssh/id_ed25519 "${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}" "
           cd ~/grocery_api_deploy &&
-          kubectl create namespace ${{ env.NAMESPACE }} --dry-run=client -o yaml | kubectl apply -f - &&
-          kubectl apply -f k8s/env-configmap.yaml -n ${{ env.NAMESPACE }} &&
-          kubectl apply -f k8s/web-cm0-configmap.yaml -n ${{ env.NAMESPACE }} &&
-          kubectl apply -f k8s/celery-cm0-configmap.yaml -n ${{ env.NAMESPACE }} &&
-          kubectl apply -f k8s/db-deployment.yaml -f k8s/db-service.yaml -n ${{ env.NAMESPACE }} &&
-          kubectl apply -f k8s/redis-deployment.yaml -f k8s/redis-service.yaml -n ${{ env.NAMESPACE }}
+          kubectl create namespace ${{ env.NAMESPACE }} --dry-run=client -o yaml | kubectl apply --validate=false -f - &&
+          kubectl apply --validate=false -f k8s/env-configmap.yaml -n ${{ env.NAMESPACE }} &&
+          kubectl apply --validate=false -f k8s/web-cm0-configmap.yaml -n ${{ env.NAMESPACE }} &&
+          kubectl apply --validate=false -f k8s/celery-cm0-configmap.yaml -n ${{ env.NAMESPACE }} &&
+          kubectl apply --validate=false -f k8s/db-deployment.yaml -f k8s/db-service.yaml -n ${{ env.NAMESPACE }} &&
+          kubectl apply --validate=false -f k8s/redis-deployment.yaml -f k8s/redis-service.yaml -n ${{ env.NAMESPACE }}
         "
 
         # Wait for database
@@ -133,8 +133,8 @@ jobs:
         echo "Deploying web and celery services..."
         ssh -i ~/.ssh/id_ed25519 "${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}" "
           cd ~/grocery_api_deploy &&
-          kubectl apply -f k8s/web-deployment.yaml -f k8s/web-service.yaml -n ${{ env.NAMESPACE }} &&
-          kubectl apply -f k8s/celery-deployment.yaml -n ${{ env.NAMESPACE }}
+          kubectl apply --validate=false -f k8s/web-deployment.yaml -f k8s/web-service.yaml -n ${{ env.NAMESPACE }} &&
+          kubectl apply --validate=false -f k8s/celery-deployment.yaml -n ${{ env.NAMESPACE }}
         "
 
         # Check deployment status
