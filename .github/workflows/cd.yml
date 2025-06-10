@@ -68,9 +68,15 @@ jobs:
         scp -i ~/.ssh/id_ed25519 ${{ env.IMAGE_NAME }}.tar ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:~/${{ env.IMAGE_NAME }}.tar
         echo "Image uploaded successfully"
 
-        # Load Docker image on remote server
-        echo "Loading Docker image on remote server..."
-        ssh -i ~/.ssh/id_ed25519 "${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}" "docker load < ${{ env.IMAGE_NAME }}.tar"
+        # Load Docker image into kind cluster
+        echo "Loading Docker image into kind cluster..."
+        ssh -i ~/.ssh/id_ed25519 "${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}" "
+          # Load the image into kind
+          echo 'Loading Docker image into kind cluster...'
+          docker load < ${{ env.IMAGE_NAME }}.tar
+          kind load docker-image ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }} --name grocery-cluster
+          echo 'Image loaded into kind cluster'
+        "
 
         # Install Kubernetes tools if needed
         echo "Ensuring Kubernetes tools are installed..."
@@ -83,132 +89,44 @@ jobs:
             sudo mv kubectl /usr/local/bin/
           fi
 
-          # Check if minikube is installed
-          if ! command -v minikube &> /dev/null; then
-            echo 'minikube not found, installing...'
-            curl -LO https://storage.googleapis.com/minikube/releases/latest/minikube-linux-amd64
-            chmod +x minikube-linux-amd64
-            sudo mv minikube-linux-amd64 /usr/local/bin/minikube
+          # Install kind
+          if ! command -v kind &> /dev/null; then
+            echo 'Installing kind...'
+            curl -Lo ./kind https://kind.sigs.k8s.io/dl/v0.20.0/kind-linux-amd64
+            chmod +x ./kind
+            sudo mv ./kind /usr/local/bin/kind
           fi
 
-          # Start minikube if not running
-          if ! minikube status &> /dev/null; then
-            echo 'Starting minikube...'
-            minikube start --driver=docker
+          # Delete existing cluster if it exists (for clean deployment)
+          if kind get clusters 2>/dev/null | grep -q grocery-cluster; then
+            echo 'Deleting existing kind cluster...'
+            kind delete cluster --name grocery-cluster
           fi
 
-          # Configure kubectl to use minikube
-          echo 'Configuring kubectl to use minikube...'
-          minikube update-context
+          # Create directories for volume mounts
+          mkdir -p /tmp/postgres-data /tmp/redis-data /tmp/static-volume /tmp/media-volume
+          chmod -R 777 /tmp/postgres-data /tmp/redis-data /tmp/static-volume /tmp/media-volume
 
-          # Check if configuration was successful
-          echo 'Kubernetes configuration:'
-          kubectl config view
-          echo 'Current context:'
-          kubectl config current-context
-        "
-
-        # Clone or update repository
-        echo "Updating deployment files on remote server..."
-        ssh -i ~/.ssh/id_ed25519 "${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}" "
-          echo 'Current directory: \$(pwd)'
-
-          # Remove existing directory if it exists but is not a git repo
-          if [ -d ~/grocery_api_deploy ] && [ ! -d ~/grocery_api_deploy/.git ]; then
-            echo 'Found existing directory but no git repository, removing it...'
-            rm -rf ~/grocery_api_deploy
-          fi
-
-          # Clone fresh if directory doesn't exist
-          if [ ! -d ~/grocery_api_deploy ]; then
-            echo 'Directory does not exist, cloning fresh...'
-            git clone https://github.com/laban254/grocery-store-api.git ~/grocery_api_deploy
-            if [ \$? -ne 0 ]; then
-              echo 'Git clone failed, trying to install git...'
-              sudo apt-get update && sudo apt-get install -y git
-              git clone https://github.com/laban254/grocery-store-api.git ~/grocery_api_deploy
-            fi
-          else
-            echo 'Directory exists, updating...'
-            cd ~/grocery_api_deploy
-            git status
-            # Ensure we're on the right branch, forcefully
-            git fetch origin staging
-            git checkout -f staging || git checkout -b staging --track origin/staging
-            git reset --hard origin/staging
-          fi
-
-          # Verify the result
-          echo 'Repository status:'
-          if [ -d ~/grocery_api_deploy ]; then
-            ls -la ~/grocery_api_deploy
-          else
-            echo 'ERROR: Repository directory not found after clone attempt'
-          fi
-        "
-
-        # Apply Kubernetes configurations
-        echo "Checking Kubernetes configuration..."
-        ssh -i ~/.ssh/id_ed25519 "${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}" "
-          echo 'Kubernetes config location: \$KUBECONFIG'
-          echo 'Checking kubectl version...'
-          kubectl version --client || true
-
-          echo 'Checking if kubectl is configured properly...'
-          kubectl config view || true
-
-          echo 'Checking current Kubernetes context...'
-          kubectl config current-context || true
-
-          echo 'Checking minikube status (if using minikube)...'
-          minikube status || true
-
-          echo 'Setting up kubectl context if needed...'
-          # If using minikube, make sure it's running
-          which minikube && (minikube status || minikube start) || true
-
-          # If using kind, list clusters
-          which kind && kind get clusters || true
-        "
-
-        echo "Applying Kubernetes configurations..."
-        ssh -i ~/.ssh/id_ed25519 "${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}" "
-          cd ~/grocery_api_deploy &&
-          kubectl create namespace ${{ env.NAMESPACE }} --dry-run=client -o yaml | kubectl apply --validate=false -f - &&
-          kubectl apply --validate=false -f k8s/env-configmap.yaml -n ${{ env.NAMESPACE }} &&
-          kubectl apply --validate=false -f k8s/web-cm0-configmap.yaml -n ${{ env.NAMESPACE }} &&
-          kubectl apply --validate=false -f k8s/celery-cm0-configmap.yaml -n ${{ env.NAMESPACE }} &&
-          kubectl apply --validate=false -f k8s/db-deployment.yaml -f k8s/db-service.yaml -n ${{ env.NAMESPACE }} &&
-          kubectl apply --validate=false -f k8s/redis-deployment.yaml -f k8s/redis-service.yaml -n ${{ env.NAMESPACE }}
-        "
-
-        # Wait for database
-        echo "Waiting for database to be ready..."
-        ssh -i ~/.ssh/id_ed25519 "${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}" "
-          kubectl wait --for=condition=available deployment/db --timeout=120s -n ${{ env.NAMESPACE }} || true
-        "
-
-        # Deploy web and celery
-        echo "Deploying web and celery services..."
-        ssh -i ~/.ssh/id_ed25519 "${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}" "
-          cd ~/grocery_api_deploy &&
-          kubectl apply --validate=false -f k8s/web-deployment.yaml -f k8s/web-service.yaml -n ${{ env.NAMESPACE }} &&
-          kubectl apply --validate=false -f k8s/celery-deployment.yaml -n ${{ env.NAMESPACE }}
-        "
-
-        # Check deployment status
-        echo "Checking deployment status..."
-        ssh -i ~/.ssh/id_ed25519 "${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}" "
-          kubectl get pods -n ${{ env.NAMESPACE }}
-        "
-
-        # Verify and cleanup
-        echo "Verifying deployment and cleaning up..."
-        ssh -i ~/.ssh/id_ed25519 "${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}" "
-          kubectl get services -n ${{ env.NAMESPACE }} &&
-          WEB_URL=\$(kubectl get service web -n ${{ env.NAMESPACE }} -o jsonpath='{.spec.clusterIP}') &&
-          echo \"Web service is available at: \$WEB_URL\" &&
-          rm -f ~/${{ env.IMAGE_NAME }}.tar
-        "
-
-        echo "Deployment complete!"
+          # Create kind cluster with minimal resource requirements and extra mounts
+          echo 'Creating kind cluster...'
+          cat > /tmp/kind-config.yaml << 'EOL'
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+cluster-name: grocery-cluster
+nodes:
+- role: control-plane
+  kubeadmConfigPatches:
+  - |
+    kind: InitConfiguration
+    nodeRegistration:
+      kubeletExtraArgs:
+        system-reserved: memory=256Mi
+  extraMounts:
+  - hostPath: /tmp/postgres-data
+    containerPath: /tmp/postgres-data
+  - hostPath: /tmp/redis-data
+    containerPath: /tmp/redis-data
+  - hostPath: /tmp/static-volume
+    containerPath: /tmp/static-volume
+  - hostPath: /tmp/media-volume
+    containerPath: /tmp/media-volume
