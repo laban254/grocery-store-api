@@ -75,10 +75,39 @@ jobs:
         # Clone or update repository
         echo "Updating deployment files on remote server..."
         ssh -i ~/.ssh/id_ed25519 "${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}" "
+          echo 'Current directory: \$(pwd)'
+
+          # Remove existing directory if it exists but is not a git repo
+          if [ -d ~/grocery_api_deploy ] && [ ! -d ~/grocery_api_deploy/.git ]; then
+            echo 'Found existing directory but no git repository, removing it...'
+            rm -rf ~/grocery_api_deploy
+          fi
+
+          # Clone fresh if directory doesn't exist
           if [ ! -d ~/grocery_api_deploy ]; then
+            echo 'Directory does not exist, cloning fresh...'
             git clone https://github.com/laban254/grocery-store-api.git ~/grocery_api_deploy
+            if [ \$? -ne 0 ]; then
+              echo 'Git clone failed, trying to install git...'
+              sudo apt-get update && sudo apt-get install -y git
+              git clone https://github.com/laban254/grocery-store-api.git ~/grocery_api_deploy
+            fi
           else
-            cd ~/grocery_api_deploy && git fetch && git reset --hard origin/staging
+            echo 'Directory exists, updating...'
+            cd ~/grocery_api_deploy
+            git status
+            # Ensure we're on the right branch, forcefully
+            git fetch origin staging
+            git checkout -f staging || git checkout -b staging --track origin/staging
+            git reset --hard origin/staging
+          fi
+
+          # Verify the result
+          echo 'Repository status:'
+          if [ -d ~/grocery_api_deploy ]; then
+            ls -la ~/grocery_api_deploy
+          else
+            echo 'ERROR: Repository directory not found after clone attempt'
           fi
         "
 
