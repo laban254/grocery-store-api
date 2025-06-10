@@ -72,6 +72,42 @@ jobs:
         echo "Loading Docker image on remote server..."
         ssh -i ~/.ssh/id_ed25519 "${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}" "docker load < ${{ env.IMAGE_NAME }}.tar"
 
+        # Install Kubernetes tools if needed
+        echo "Ensuring Kubernetes tools are installed..."
+        ssh -i ~/.ssh/id_ed25519 "${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}" "
+          # Check if kubectl is installed
+          if ! command -v kubectl &> /dev/null; then
+            echo 'kubectl not found, installing...'
+            curl -LO \"https://dl.k8s.io/release/\$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl\"
+            chmod +x kubectl
+            sudo mv kubectl /usr/local/bin/
+          fi
+
+          # Check if minikube is installed
+          if ! command -v minikube &> /dev/null; then
+            echo 'minikube not found, installing...'
+            curl -LO https://storage.googleapis.com/minikube/releases/latest/minikube-linux-amd64
+            chmod +x minikube-linux-amd64
+            sudo mv minikube-linux-amd64 /usr/local/bin/minikube
+          fi
+
+          # Start minikube if not running
+          if ! minikube status &> /dev/null; then
+            echo 'Starting minikube...'
+            minikube start --driver=docker
+          fi
+
+          # Configure kubectl to use minikube
+          echo 'Configuring kubectl to use minikube...'
+          minikube update-context
+
+          # Check if configuration was successful
+          echo 'Kubernetes configuration:'
+          kubectl config view
+          echo 'Current context:'
+          kubectl config current-context
+        "
+
         # Clone or update repository
         echo "Updating deployment files on remote server..."
         ssh -i ~/.ssh/id_ed25519 "${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}" "
@@ -112,6 +148,29 @@ jobs:
         "
 
         # Apply Kubernetes configurations
+        echo "Checking Kubernetes configuration..."
+        ssh -i ~/.ssh/id_ed25519 "${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}" "
+          echo 'Kubernetes config location: \$KUBECONFIG'
+          echo 'Checking kubectl version...'
+          kubectl version --client || true
+
+          echo 'Checking if kubectl is configured properly...'
+          kubectl config view || true
+
+          echo 'Checking current Kubernetes context...'
+          kubectl config current-context || true
+
+          echo 'Checking minikube status (if using minikube)...'
+          minikube status || true
+
+          echo 'Setting up kubectl context if needed...'
+          # If using minikube, make sure it's running
+          which minikube && (minikube status || minikube start) || true
+
+          # If using kind, list clusters
+          which kind && kind get clusters || true
+        "
+
         echo "Applying Kubernetes configurations..."
         ssh -i ~/.ssh/id_ed25519 "${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}" "
           cd ~/grocery_api_deploy &&
