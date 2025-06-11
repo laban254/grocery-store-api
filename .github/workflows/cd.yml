@@ -2,7 +2,7 @@ name: Continuous Delivery
 
 on:
   push:
-    branches: [ "staging" ]
+    branches: ["staging"]
     paths-ignore:
       - "README.md"
       - "KUBERNETES.md"
@@ -33,96 +33,85 @@ jobs:
         docker save ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }} > ${{ env.IMAGE_NAME }}.tar
         echo "Docker image built and saved successfully"
 
-    - name: Set up SSH and deploy
+    - name: Deploy to kind cluster
+      env:
+        GCP_SSH_KEY: ${{ secrets.GCP_SSH_KEY }}
+        SERVER_HOST: ${{ secrets.SERVER_HOST }}
+        SERVER_USER: ${{ secrets.SERVER_USER }}
       run: |
-        echo "Setting up SSH connection..."
+        # Set up SSH
         mkdir -p ~/.ssh
-        echo "${{ secrets.GCP_SSH_KEY }}" > ~/.ssh/id_ed25519
+        echo "$GCP_SSH_KEY" > ~/.ssh/id_ed25519
         chmod 600 ~/.ssh/id_ed25519
+        ssh-keyscan -H "$SERVER_HOST" >> ~/.ssh/known_hosts
 
-        # Debug step (will mask sensitive data)
-        echo "SERVER_HOST is set: ${{ secrets.SERVER_HOST != '' }}"
-        echo "SERVER_USER is set: ${{ secrets.SERVER_USER != '' }}"
+        # Upload Docker image and kind config
+        echo "Uploading Docker image and configuration..."
+        scp -i ~/.ssh/id_ed25519 ${{ env.IMAGE_NAME }}.tar "$SERVER_USER@$SERVER_HOST:~/${{ env.IMAGE_NAME }}.tar"
+        scp -i ~/.ssh/id_ed25519 k8s/kind-config.yaml "$SERVER_USER@$SERVER_HOST:~/kind-config.yaml"
 
-        # Validate secrets are set
-        if [ -z "${{ secrets.SERVER_HOST }}" ]; then
-          echo "ERROR: SERVER_HOST secret is not set"
-          exit 1
-        fi
+        # Verify files were uploaded correctly
+        ssh -i ~/.ssh/id_ed25519 "$SERVER_USER@$SERVER_HOST" "ls -la ~/kind-config.yaml ~/grocery_api.tar"
 
-        if [ -z "${{ secrets.SERVER_USER }}" ]; then
-          echo "ERROR: SERVER_USER secret is not set"
-          exit 1
-        fi
-
-        # Add server to known hosts
-        ssh-keyscan -H "${{ secrets.SERVER_HOST }}" >> ~/.ssh/known_hosts
-        echo "SSH keyscan completed"
-
-        # Test connection
-        echo "Testing SSH connection..."
-        ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_ed25519 "${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}" 'echo "Connected successfully!"'
-
-        # Upload Docker image
-        echo "Uploading Docker image..."
-        scp -i ~/.ssh/id_ed25519 ${{ env.IMAGE_NAME }}.tar ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:~/${{ env.IMAGE_NAME }}.tar
-        echo "Image uploaded successfully"
-
-        # Execute all deployment commands in a single SSH session
-        echo "Executing deployment commands..."
-        ssh -i ~/.ssh/id_ed25519 "${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}" << EOF
-          # Load the Docker image
-          echo "Loading Docker image..."
-          docker load < ${{ env.IMAGE_NAME }}.tar
-
-          # Clone or update deployment repository
-          echo "Updating deployment files..."
-          mkdir -p ~/grocery_api_deploy
-          if [ ! -d ~/grocery_api_deploy/.git ]; then
-            git clone \$(git config --get remote.origin.url) ~/grocery_api_deploy
-          else
-            cd ~/grocery_api_deploy
-            git pull
+        # Run remote commands to set up and deploy
+        ssh -i ~/.ssh/id_ed25519 "$SERVER_USER@$SERVER_HOST" bash -c '
+          # Install kubectl if needed
+          if ! command -v kubectl &> /dev/null; then
+            curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+            chmod +x kubectl
+            sudo mv kubectl /usr/local/bin/
           fi
 
-          # Apply Kubernetes manifests
+          # Install kind if needed
+          if ! command -v kind &> /dev/null; then
+            curl -Lo ./kind https://kind.sigs.k8s.io/dl/v0.20.0/kind-linux-amd64
+            chmod +x ./kind
+            sudo mv ./kind /usr/local/bin/kind
+          fi
+
+          # Delete existing cluster
+          kind delete cluster --name grocery-cluster || true
+
+          # Create volume directories
+          mkdir -p /tmp/{postgres-data,redis-data,static-volume,media-volume}
+          chmod -R 777 /tmp/{postgres-data,redis-data,static-volume,media-volume}
+
+          # Create cluster using the config file
+          kind create cluster --config=$HOME/kind-config.yaml
+
+          # Load image into kind
+          docker load < $HOME/grocery_api.tar
+          kind load docker-image grocery_api:latest --name grocery-cluster
+
+          # Configure kubectl
+          kubectl config use-context kind-grocery-cluster
+
+          # Clone repository
+          if [ ! -d ~/grocery_api_deploy ]; then
+            git clone https://github.com/laban254/grocery-store-api.git ~/grocery_api_deploy
+          fi
           cd ~/grocery_api_deploy
+          git fetch origin staging
+          git checkout -f staging
 
-          # Create namespace if it doesn't exist
-          echo "Creating/verifying namespace..."
-          kubectl create namespace ${NAMESPACE} --dry-run=client -o yaml | kubectl apply -f -
+          # Apply Kubernetes configs
+          kubectl create namespace grocery-api --dry-run=client -o yaml | kubectl apply -f -
+          kubectl apply -f k8s/env-configmap.yaml -n grocery-api
+          kubectl apply -f k8s/web-cm0-configmap.yaml -n grocery-api
+          kubectl apply -f k8s/celery-cm0-configmap.yaml -n grocery-api
+          kubectl apply -f k8s/db-deployment.yaml -f k8s/db-service.yaml -n grocery-api
+          kubectl apply -f k8s/redis-deployment.yaml -f k8s/redis-service.yaml -n grocery-api
 
-          # Apply ConfigMaps first
-          echo "Applying ConfigMaps..."
-          kubectl apply -f k8s/env-configmap.yaml -n ${NAMESPACE}
-          kubectl apply -f k8s/web-cm0-configmap.yaml -n ${NAMESPACE}
-          kubectl apply -f k8s/celery-cm0-configmap.yaml -n ${NAMESPACE}
+          # Wait for database
+          kubectl wait --for=condition=available deployment/db --timeout=120s -n grocery-api || true
 
-          # Apply database and Redis
-          echo "Deploying database and Redis..."
-          kubectl apply -f k8s/db-deployment.yaml -f k8s/db-service.yaml -n ${NAMESPACE}
-          kubectl apply -f k8s/redis-deployment.yaml -f k8s/redis-service.yaml -n ${NAMESPACE}
+          # Deploy web and celery
+          kubectl apply -f k8s/web-deployment.yaml -f k8s/web-service.yaml -n grocery-api
+          kubectl apply -f k8s/celery-deployment.yaml -n grocery-api
 
-          # Wait for database to be ready
-          echo "Waiting for database to be ready..."
-          kubectl wait --for=condition=available deployment/db --timeout=120s -n ${NAMESPACE} || true
-
-          # Apply web and celery deployments
-          echo "Deploying web and celery services..."
-          kubectl apply -f k8s/web-deployment.yaml -f k8s/web-service.yaml -n ${NAMESPACE}
-          kubectl apply -f k8s/celery-deployment.yaml -n ${NAMESPACE}
-
-          # Check deployment status
-          echo "Checking deployment status..."
-          kubectl get pods -n ${NAMESPACE}
-
-          # Get web service URL and verify the deployment
-          echo "Verifying deployment..."
-          kubectl get services -n ${NAMESPACE}
-          WEB_URL=\$(kubectl get service web -n ${NAMESPACE} -o jsonpath='{.spec.clusterIP}')
-          echo "Web service is available at: \$WEB_URL"
-
-          # Clean up
-          echo "Cleaning up..."
-          rm -f ~/${{ env.IMAGE_NAME }}.tar
-          echo "Deployment complete!"
+          # Show status
+          kubectl get pods -n grocery-api
+          WEB_URL=$(kubectl get service web -n grocery-api -o jsonpath="{.spec.clusterIP}")
+          echo "Web service is available at: $WEB_URL"
+          rm -f ~/grocery_api.tar
+        '
