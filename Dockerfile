@@ -4,6 +4,7 @@ FROM python:3.10-slim
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 ENV PYTHONPATH=/app/src
+ENV PORT=8000
 
 # Set work directory
 WORKDIR /app
@@ -24,12 +25,14 @@ RUN pip install --upgrade pip && pip install -r requirements.txt
 # Copy project
 COPY . /app/
 
-# Copy entrypoint script
-COPY ./docker/entrypoint.sh /entrypoint.sh
-RUN chmod +x /entrypoint.sh
-
 # Create directories for static and media files
 RUN mkdir -p /app/src/staticfiles /app/src/mediafiles
 
-# Run entrypoint script
-ENTRYPOINT ["/entrypoint.sh"]
+# Run collectstatic
+RUN python src/manage.py collectstatic --noinput
+
+# Make port available
+EXPOSE $PORT
+
+# Default command
+CMD gunicorn --chdir src grocery_api.wsgi:application --bind 0.0.0.0:$PORT
