@@ -2,7 +2,7 @@ name: Continuous Delivery
 
 on:
   push:
-    branches: [ "staging" ]
+    branches: ["staging"]
     paths-ignore:
       - "README.md"
       - "KUBERNETES.md"
@@ -33,100 +33,82 @@ jobs:
         docker save ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }} > ${{ env.IMAGE_NAME }}.tar
         echo "Docker image built and saved successfully"
 
-    - name: Set up SSH and deploy
+    - name: Deploy to kind cluster
+      env:
+        GCP_SSH_KEY: ${{ secrets.GCP_SSH_KEY }}
+        SERVER_HOST: ${{ secrets.SERVER_HOST }}
+        SERVER_USER: ${{ secrets.SERVER_USER }}
       run: |
-        echo "Setting up SSH connection..."
+        # Set up SSH
         mkdir -p ~/.ssh
-        echo "${{ secrets.GCP_SSH_KEY }}" > ~/.ssh/id_ed25519
+        echo "$GCP_SSH_KEY" > ~/.ssh/id_ed25519
         chmod 600 ~/.ssh/id_ed25519
+        ssh-keyscan -H "$SERVER_HOST" >> ~/.ssh/known_hosts
 
-        # Debug step (will mask sensitive data)
-        echo "SERVER_HOST is set: ${{ secrets.SERVER_HOST != '' }}"
-        echo "SERVER_USER is set: ${{ secrets.SERVER_USER != '' }}"
+        # Upload Docker image and kind config
+        echo "Uploading Docker image and configuration..."
+        scp -i ~/.ssh/id_ed25519 ${{ env.IMAGE_NAME }}.tar "$SERVER_USER@$SERVER_HOST:~/${{ env.IMAGE_NAME }}.tar"
+        scp -i ~/.ssh/id_ed25519 k8s/kind-config.yaml "$SERVER_USER@$SERVER_HOST:~/kind-config.yaml"
 
-        # Validate secrets are set
-        if [ -z "${{ secrets.SERVER_HOST }}" ]; then
-          echo "ERROR: SERVER_HOST secret is not set"
-          exit 1
-        fi
-
-        if [ -z "${{ secrets.SERVER_USER }}" ]; then
-          echo "ERROR: SERVER_USER secret is not set"
-          exit 1
-        fi
-
-        # Add server to known hosts
-        ssh-keyscan -H "${{ secrets.SERVER_HOST }}" >> ~/.ssh/known_hosts
-        echo "SSH keyscan completed"
-
-        # Test connection
-        echo "Testing SSH connection..."
-        ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_ed25519 "${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}" 'echo "Connected successfully!"'
-
-        # Upload Docker image
-        echo "Uploading Docker image..."
-        scp -i ~/.ssh/id_ed25519 ${{ env.IMAGE_NAME }}.tar ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:~/${{ env.IMAGE_NAME }}.tar
-        echo "Image uploaded successfully"
-
-        # Load Docker image into kind cluster
-        echo "Loading Docker image into kind cluster..."
-        ssh -i ~/.ssh/id_ed25519 "${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}" "
-          # Load the image into kind
-          echo 'Loading Docker image into kind cluster...'
-          docker load < ${{ env.IMAGE_NAME }}.tar
-          kind load docker-image ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }} --name grocery-cluster
-          echo 'Image loaded into kind cluster'
-        "
-
-        # Install Kubernetes tools if needed
-        echo "Ensuring Kubernetes tools are installed..."
-        ssh -i ~/.ssh/id_ed25519 "${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}" "
-          # Check if kubectl is installed
+        # Run remote commands to set up and deploy
+        ssh -i ~/.ssh/id_ed25519 "$SERVER_USER@$SERVER_HOST" bash -c '
+          # Install kubectl if needed
           if ! command -v kubectl &> /dev/null; then
-            echo 'kubectl not found, installing...'
-            curl -LO \"https://dl.k8s.io/release/\$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl\"
+            curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
             chmod +x kubectl
             sudo mv kubectl /usr/local/bin/
           fi
 
-          # Install kind
+          # Install kind if needed
           if ! command -v kind &> /dev/null; then
-            echo 'Installing kind...'
             curl -Lo ./kind https://kind.sigs.k8s.io/dl/v0.20.0/kind-linux-amd64
             chmod +x ./kind
             sudo mv ./kind /usr/local/bin/kind
           fi
 
-          # Delete existing cluster if it exists (for clean deployment)
-          if kind get clusters 2>/dev/null | grep -q grocery-cluster; then
-            echo 'Deleting existing kind cluster...'
-            kind delete cluster --name grocery-cluster
+          # Delete existing cluster
+          kind delete cluster --name grocery-cluster || true
+
+          # Create volume directories
+          mkdir -p /tmp/{postgres-data,redis-data,static-volume,media-volume}
+          chmod -R 777 /tmp/{postgres-data,redis-data,static-volume,media-volume}
+
+          # Create cluster using the config file
+          kind create cluster --config=~/kind-config.yaml
+
+          # Load image into kind
+          docker load < ~/grocery_api.tar
+          kind load docker-image grocery_api:latest --name grocery-cluster
+
+          # Configure kubectl
+          kubectl config use-context kind-grocery-cluster
+
+          # Clone repository
+          if [ ! -d ~/grocery_api_deploy ]; then
+            git clone https://github.com/laban254/grocery-store-api.git ~/grocery_api_deploy
           fi
+          cd ~/grocery_api_deploy
+          git fetch origin staging
+          git checkout -f staging
 
-          # Create directories for volume mounts
-          mkdir -p /tmp/postgres-data /tmp/redis-data /tmp/static-volume /tmp/media-volume
-          chmod -R 777 /tmp/postgres-data /tmp/redis-data /tmp/static-volume /tmp/media-volume
+          # Apply Kubernetes configs
+          kubectl create namespace grocery-api --dry-run=client -o yaml | kubectl apply -f -
+          kubectl apply -f k8s/env-configmap.yaml -n grocery-api
+          kubectl apply -f k8s/web-cm0-configmap.yaml -n grocery-api
+          kubectl apply -f k8s/celery-cm0-configmap.yaml -n grocery-api
+          kubectl apply -f k8s/db-deployment.yaml -f k8s/db-service.yaml -n grocery-api
+          kubectl apply -f k8s/redis-deployment.yaml -f k8s/redis-service.yaml -n grocery-api
 
-          # Create kind cluster with minimal resource requirements and extra mounts
-          echo 'Creating kind cluster...'
-          cat > /tmp/kind-config.yaml << 'EOL'
-kind: Cluster
-apiVersion: kind.x-k8s.io/v1alpha4
-cluster-name: grocery-cluster
-nodes:
-- role: control-plane
-  kubeadmConfigPatches:
-  - |
-    kind: InitConfiguration
-    nodeRegistration:
-      kubeletExtraArgs:
-        system-reserved: memory=256Mi
-  extraMounts:
-  - hostPath: /tmp/postgres-data
-    containerPath: /tmp/postgres-data
-  - hostPath: /tmp/redis-data
-    containerPath: /tmp/redis-data
-  - hostPath: /tmp/static-volume
-    containerPath: /tmp/static-volume
-  - hostPath: /tmp/media-volume
-    containerPath: /tmp/media-volume
+          # Wait for database
+          kubectl wait --for=condition=available deployment/db --timeout=120s -n grocery-api || true
+
+          # Deploy web and celery
+          kubectl apply -f k8s/web-deployment.yaml -f k8s/web-service.yaml -n grocery-api
+          kubectl apply -f k8s/celery-deployment.yaml -n grocery-api
+
+          # Show status
+          kubectl get pods -n grocery-api
+          WEB_URL=$(kubectl get service web -n grocery-api -o jsonpath="{.spec.clusterIP}")
+          echo "Web service is available at: $WEB_URL"
+          rm -f ~/grocery_api.tar
+        '
