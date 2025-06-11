@@ -2,6 +2,9 @@
 
 A Django-based REST API for managing a grocery store with Kubernetes deployment support and CI/CD integration.
 
+[Swagger UI](https://grocery-api-service-e31a380bc482.herokuapp.com/api/schema/swagger-ui/)
+
+
 ![Tests](https://github.com/laban254/grocery-store-api/actions/workflows/ci.yml/badge.svg)
 ![Coverage](https://img.shields.io/badge/Coverage-85%25-success)
 
