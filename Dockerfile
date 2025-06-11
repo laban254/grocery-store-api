@@ -28,8 +28,8 @@ COPY . /app/
 # Create directories for static and media files
 RUN mkdir -p /app/src/staticfiles /app/src/mediafiles
 
-# Run collectstatic
-RUN python src/manage.py collectstatic --noinput
+# Note: We no longer run collectstatic during build
+# It will be run during the release phase instead
 
 # Make port available
 EXPOSE $PORT

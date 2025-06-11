@@ -84,6 +84,7 @@ INSTALLED_APPS += [
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -329,18 +330,33 @@ API for a grocery store management system
 # 2. Use sandbox API key from Africa's Talking dashboard
 # 3. Phone numbers must be registered in sandbox environment
 AFRICAS_TALKING_ENVIRONMENT = os.environ.get("AFRICAS_TALKING_ENVIRONMENT", "sandbox")
-AFRICAS_TALKING_API_KEY = os.environ.get("AFRICAS_TALKING_API_KEY")
+# Make API key optional during collectstatic to prevent build errors
+AFRICAS_TALKING_API_KEY = os.environ.get("AFRICAS_TALKING_API_KEY", "dummy-key-for-collectstatic")
 
 # These settings are only used in production mode
 AFRICAS_TALKING_USERNAME = os.environ.get("AFRICAS_TALKING_USERNAME", "sandbox")
 AFRICAS_TALKING_SENDER_ID = os.environ.get(
-    "AFRICAS_TALKING_SENDER_ID"
+    "AFRICAS_TALKING_SENDER_ID", ""
 )  # Optional, for branded messages
 
 # Celery Configuration
 CELERY_BROKER_URL = os.environ.get("CELERY_BROKER_URL", "redis://localhost:6379/0")
 CELERY_RESULT_BACKEND = os.environ.get("CELERY_RESULT_BACKEND", "redis://localhost:6379/0")
-CELERY_ACCEPT_CONTENT = ["json"]
-CELERY_TASK_SERIALIZER = "json"
-CELERY_RESULT_SERIALIZER = "json"
 CELERY_TIMEZONE = TIME_ZONE
+
+# Heroku-specific settings
+if "DYNO" in os.environ:
+    # Configure allowed hosts for Heroku
+    ALLOWED_HOSTS.append(".herokuapp.com")
+
+    # Enable WhiteNoise storage for static files
+    STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
+
+    # Security settings for production
+    SECURE_SSL_REDIRECT = True
+    SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    SECURE_HSTS_SECONDS = 31536000  # 1 year
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_PRELOAD = True

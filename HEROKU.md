@@ -98,7 +98,23 @@ export APP_NAME=your-grocery-api
 ./scripts/setup_heroku.sh
 ```
 
-2. Push to Heroku
+2. Set up environment variables
+
+   The `setup_heroku.sh` script will automatically:
+   - Create a new Heroku app if it doesn't exist
+   - Set the stack to container mode
+   - Add PostgreSQL and Redis addons
+   - Set essential environment variables including a generated SECRET_KEY
+   - Import variables from your local `.env` file if it exists
+
+   For a complete list of environment variables, see [ENV_VARIABLES.md](ENV_VARIABLES.md).
+
+   You can also manually set any additional environment variables:
+   ```bash
+   heroku config:set AFRICAS_TALKING_API_KEY=your-key -a $APP_NAME
+   ```
+
+3. Push to Heroku
 ```bash
 heroku git:remote -a $APP_NAME
 git push heroku main
