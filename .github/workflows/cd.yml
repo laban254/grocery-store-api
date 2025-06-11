@@ -50,6 +50,9 @@ jobs:
         scp -i ~/.ssh/id_ed25519 ${{ env.IMAGE_NAME }}.tar "$SERVER_USER@$SERVER_HOST:~/${{ env.IMAGE_NAME }}.tar"
         scp -i ~/.ssh/id_ed25519 k8s/kind-config.yaml "$SERVER_USER@$SERVER_HOST:~/kind-config.yaml"
 
+        # Verify files were uploaded correctly
+        ssh -i ~/.ssh/id_ed25519 "$SERVER_USER@$SERVER_HOST" "ls -la ~/kind-config.yaml ~/grocery_api.tar"
+
         # Run remote commands to set up and deploy
         ssh -i ~/.ssh/id_ed25519 "$SERVER_USER@$SERVER_HOST" bash -c '
           # Install kubectl if needed
@@ -74,10 +77,10 @@ jobs:
           chmod -R 777 /tmp/{postgres-data,redis-data,static-volume,media-volume}
 
           # Create cluster using the config file
-          kind create cluster --config=~/kind-config.yaml
+          kind create cluster --config=$HOME/kind-config.yaml
 
           # Load image into kind
-          docker load < ~/grocery_api.tar
+          docker load < $HOME/grocery_api.tar
           kind load docker-image grocery_api:latest --name grocery-cluster
 
           # Configure kubectl
